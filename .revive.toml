@@ -1,0 +1,164 @@
+severity = "warning"
+confidence = 0.8
+errorCode = 1
+warningCode = 1
+
+# Enable all available rules
+enableAllRules = true
+
+exclude = [
+  "./pkg/addons/declared/init.go"
+]
+
+[rule.add-constant]
+    disabled = true # TODO: should enable ?
+[rule.argument-limit]
+    disabled = true
+[rule.atomic]
+    disabled = false
+[rule.bare-return]
+    disabled = false
+[rule.banned-characters]
+    disabled = true
+[rule.blank-imports]
+    disabled = false
+[rule.bool-literal-in-expr]
+    disabled = false
+[rule.call-to-gc]
+    disabled = false
+[rule.confusing-naming]
+    disabled = true
+[rule.comment-spacings]
+    disabled = false
+[rule.confusing-results]
+    disabled = true
+[rule.cognitive-complexity]
+    disabled = true # This is very relative, disable it.
+[rule.cyclomatic]
+    disabled = true # This is very relative, disable it.
+[rule.constant-logical-expr]
+    disabled = false
+[rule.context-as-argument]
+    disabled = false
+[rule.context-keys-type]
+    disabled = false
+[rule.datarace]
+    disabled = false
+[rule.deep-exit]
+    disabled = true
+[rule.defer]
+    arguments = [[
+        "call-chain",
+        "method-call",
+        "recover",
+        "immediate-recover",
+        "return",
+        # "loop",
+    ]]
+[rule.dot-imports]
+    disabled = false
+[rule.duplicated-imports]
+    disabled = false
+[rule.early-return]
+    disabled = false
+[rule.empty-block]
+    disabled = false
+[rule.empty-lines]
+    disabled = false
+[rule.error-naming]
+    disabled = false
+[rule.error-return]
+    disabled = false
+[rule.error-strings]
+    disabled = false
+[rule.errorf]
+    disabled = false
+[rule.exported]
+    disabled = true # TODO: should enable.
+[rule.file-header]
+    disabled = false
+[rule.flag-parameter]
+    disabled = true # Disable control coupling warnings.
+[rule.function-result-limit]
+    disabled = false
+[rule.function-length]
+    disabled = true
+[rule.get-return]
+    disabled = false
+[rule.identical-branches]
+    disabled = false
+[rule.if-return]
+    disabled = false
+[rule.increment-decrement]
+    disabled = false
+[rule.indent-error-flow]
+    disabled = false
+[rule.imports-blacklist]
+    disabled = true
+[rule.import-shadowing]
+    disabled = false
+[rule.line-length-limit]
+    disabled = false
+    Arguments = [120]
+[rule.max-public-structs]
+    disabled = true
+[rule.modifies-parameter]
+    disabled = false
+[rule.modifies-value-receiver]
+    disabled = false
+[rule.nested-structs]
+    disabled = false
+[rule.optimize-operands-order]
+    disabled = false
+[rule.package-comments]
+    disabled = true # TODO: should enable ?
+[rule.range]
+    disabled = false
+[rule.range-val-in-closure]
+    disabled = false
+[rule.range-val-address]
+    disabled = false
+[rule.receiver-naming]
+    disabled = false
+[rule.redefines-builtin-id]
+    disabled = false
+[rule.string-of-int]
+    disabled = false
+[rule.struct-tag]
+    disabled = false
+[rule.string-format]
+    disabled = false
+[rule.superfluous-else]
+    disabled = false
+[rule.time-equal]
+    disabled = false
+[rule.time-naming]
+    disabled = false
+[rule.var-naming]
+    disabled = true
+[rule.var-declaration]
+    disabled = false
+[rule.unchecked-type-assertion]
+    disabled = false
+[rule.unconditional-recursion]
+    disabled = false
+[rule.unexported-naming]
+    disabled = false
+[rule.unexported-return]
+    disabled = false 
+[rule.unhandled-error]
+    disabled = true
+[rule.unnecessary-stmt]
+    disabled = false
+[rule.unreachable-code]
+    disabled = false
+[rule.unused-parameter]
+    disabled = false
+[rule.unused-receiver]
+    disabled = false
+[rule.use-any]
+    disabled = false
+[rule.useless-break]
+    disabled = false
+[rule.waitgroup-by-value]
+    disabled = false
