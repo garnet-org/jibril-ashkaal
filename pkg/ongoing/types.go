@@ -134,17 +134,14 @@ type FSFile struct {
 // Flow.
 
 type Flow struct {
-	IPVersion   int    `json:"ip_version"`             // IP version.
-	Proto       string `json:"proto"`                  // Protocol.
-	ICMP        ICMP   `json:"icmp"`                   // ICMP.
-	Local       Node   `json:"local"`                  // Local node.
-	Remote      Node   `json:"remote"`                 // Remote node.
-	ServicePort int    `json:"service_port"`           // Service port.
-	Flags       Flags  `json:"flags"`                  // Flags.
-	Direction   string `json:"direction,omitempty"`    // Direction of the flow.
-	InitatedBy  string `json:"initiated_by,omitempty"` // Who initiated the flow.
-	Status      string `json:"status,omitempty"`       // Status of the flow.
-	EndedBy     string `json:"ended_by,omitempty"`     // Who ended the flow.
+	IPVersion   int    `json:"ip_version"`   // IP version.
+	Proto       string `json:"proto"`        // Protocol.
+	ICMP        ICMP   `json:"icmp"`         // ICMP.
+	Local       Node   `json:"local"`        // Local node.
+	Remote      Node   `json:"remote"`       // Remote node.
+	ServicePort int    `json:"service_port"` // Service port.
+	Flags       Flags  `json:"flags"`        // Flags.
+	Phase       Phase  `json:"phase"`        // Flow phase.
 }
 
 type ICMP struct {
@@ -169,6 +166,13 @@ type Flags struct {
 	Ended      bool `json:"ended"`      // Connection has been ended.
 	Terminator bool `json:"terminator"` // Local node has terminated the connection.
 	Terminated bool `json:"terminated"` // Remote node has terminated the connection.
+}
+
+type Phase struct {
+	Direction  string `json:"direction"`    // Direction of the flow.
+	InitatedBy string `json:"initiated_by"` // Who initiated the flow.
+	Status     string `json:"status"`       // Status of the flow.
+	EndedBy    string `json:"ended_by"`     // Who ended the flow.
 }
 
 // Flow Aggregates.
@@ -208,7 +212,7 @@ type LocalRemotePair struct {
 type PortCommAgg struct {
 	SrcPort int   `json:"src_port"` // Source port.
 	DstPort int   `json:"dst_port"` // Destination port.
-	Flags   Flags `json:"flags"`    // Aggregated flags for this port pair.
+	Phase   Phase `json:"phase"`    // Flow phase.
 }
 
 // Habitat.
