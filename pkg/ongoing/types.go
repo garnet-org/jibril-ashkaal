@@ -17,19 +17,30 @@ type Metadata struct {
 // All detection events have these fields.
 
 type Base struct {
-	UUID      string   `json:"uuid"`              // The unique ID of the detection.
-	Timestamp string   `json:"timestamp"`         // The timestamp of the detection.
-	Metadata  Metadata `json:"metadata"`          // The detection metadata (Previous Head).
-	Note      string   `json:"note,omitempty"`    // A note about the detection.
-	Context   Context  `json:"context,omitempty"` // The detection context (Previous Body).
-	Habitat   Habitat  `json:"habitat,omitempty"` // The detection habitat.
-	Body      any      `json:"body,omitempty"`    // The detection body.
+	UUID       string     `json:"uuid"`                 // The unique ID of the detection.
+	Timestamp  string     `json:"timestamp"`            // The timestamp of the detection.
+	Metadata   Metadata   `json:"metadata"`             // The detection metadata (Previous Head).
+	Note       string     `json:"note,omitempty"`       // A note about the detection.
+	Attenuator Attenuator `json:"attenuator,omitempty"` // The attenuator of the detection.
+	Context    Context    `json:"context,omitempty"`    // The detection context (Previous Body).
+	Habitat    Habitat    `json:"habitat,omitempty"`    // The detection habitat.
+	Body       any        `json:"body,omitempty"`       // The detection body.
 }
 
 type Context struct {
 	Files    FileAggregate `json:"files,omitempty"`
 	Flows    FlowAggregate `json:"flows,omitempty"`
 	Ancestry []Process     `json:"ancestry,omitempty"`
+}
+
+// Attenuator.
+
+type Attenuator struct {
+	IsFalsePositive bool   `json:"is_false_positive"`   // Whether the detection is a false positive.
+	NewImportance   string `json:"new_importance"`      // The new detection importance after attenuation.
+	Interpretation  string `json:"interpretation"`      // The interpretation of the attenuation.
+	Reasoning       string `json:"reasoning,omitempty"` // The reasoning behind the attenuation.
+	AttenuatedBy    string `json:"attenuated_by"`       // The model that attenuated the detection.
 }
 
 // File Access Detection Event.
