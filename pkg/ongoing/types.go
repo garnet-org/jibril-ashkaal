@@ -1,36 +1,64 @@
 package ongoing
 
-// Detection Event Metadata.
-
-type Metadata struct {
-	Name          string `json:"name"`                    // The name of the detection event.
-	Format        string `json:"format"`                  // The format of the detection event.
-	Version       string `json:"version"`                 // The version of the detection event.
-	Description   string `json:"description,omitempty"`   // The description of the detection event.
-	Documentation string `json:"documentation,omitempty"` // The documentation of the detection event.
-	Tactic        string `json:"tactic,omitempty"`        // The tactic of the detection event.
-	Technique     string `json:"technique,omitempty"`     // The technique of the detection event.
-	SubTechnique  string `json:"subtechnique,omitempty"`  // The subtechnique of the detection event.
-	Importance    string `json:"importance,omitempty"`    // The importance of the detection event.
-}
-
 // All detection events have these fields.
 
 type Base struct {
-	UUID       string     `json:"uuid"`                 // The unique ID of the detection.
-	Timestamp  string     `json:"timestamp"`            // The timestamp of the detection.
-	Metadata   Metadata   `json:"metadata"`             // The detection metadata (Previous Head).
-	Note       string     `json:"note,omitempty"`       // A note about the detection.
-	Attenuator Attenuator `json:"attenuator,omitempty"` // The attenuator of the detection.
-	Context    Context    `json:"context,omitempty"`    // The detection context (Previous Body).
-	Habitat    Habitat    `json:"habitat,omitempty"`    // The detection habitat.
-	Body       any        `json:"body,omitempty"`       // The detection body.
+	UUID       string      `json:"uuid"`                 // The unique ID of the detection.
+	Timestamp  string      `json:"timestamp"`            // The timestamp of the detection.
+	Note       string      `json:"note,omitempty"`       // A note about the detection.
+	Metadata   *Metadata   `json:"metadata"`             // The detection metadata (Previous Head).
+	Attenuator *Attenuator `json:"attenuator,omitempty"` // The attenuator of the detection.
+	Background *Background `json:"background,omitempty"` // The detection context (Previous Body).
+	Habitat    *Habitat    `json:"habitat,omitempty"`    // The detection habitat.
+	Scenario   []Scenario  `json:"scenario,omitempty"`   // GitHub, Kubernetes, Host, etc.
 }
 
-type Context struct {
-	Files    FileAggregate `json:"files,omitempty"`
-	Flows    FlowAggregate `json:"flows,omitempty"`
-	Ancestry []Process     `json:"ancestry,omitempty"`
+func (b *Base) SetMetadata(metadata *Metadata) {
+	b.Metadata = metadata
+}
+
+func (b *Base) SetAttenuator(attenuator *Attenuator) {
+	b.Attenuator = attenuator
+}
+
+func (b *Base) SetBackground(background *Background) {
+	b.Background = background
+}
+
+func (b *Base) SetHabitat(habitat *Habitat) {
+	b.Habitat = habitat
+}
+
+func (b *Base) AddScenario(scenario Scenario) {
+	b.Scenario = append(b.Scenario, scenario)
+}
+
+func (b *Base) Clone() *Base {
+	return &Base{
+		UUID:       b.UUID,
+		Timestamp:  b.Timestamp,
+		Note:       b.Note,
+		Metadata:   b.Metadata,
+		Attenuator: b.Attenuator,
+		Background: b.Background,
+		Habitat:    b.Habitat,
+		Scenario:   nil,
+	}
+}
+
+// Detection Event Metadata.
+
+type Metadata struct {
+	Kind          string `json:"kind"`                    // Detection event class name.
+	Name          string `json:"name"`                    // Detection recipe name.
+	Format        string `json:"format"`                  // Detection event format.
+	Version       string `json:"version"`                 // Detection event format version.
+	Description   string `json:"description,omitempty"`   // Detection event description.
+	Importance    string `json:"importance,omitempty"`    // Detection event importance.
+	Documentation string `json:"documentation,omitempty"` // Detection event documentation.
+	Tactic        string `json:"tactic,omitempty"`        // Detection event MITRE tactic.
+	Technique     string `json:"technique,omitempty"`     // Detection event MITRE technique.
+	SubTechnique  string `json:"subtechnique,omitempty"`  // Detection event MITREsubtechnique.
 }
 
 // Attenuator.
@@ -43,41 +71,105 @@ type Attenuator struct {
 	AttenuatedBy    string `json:"attenuated_by"`       // The model that attenuated the detection.
 }
 
+// Context.
+
+type Background struct {
+	Files    *FileAggregate `json:"files,omitempty"`
+	Flows    *FlowAggregate `json:"flows,omitempty"`
+	Ancestry []Process      `json:"ancestry,omitempty"`
+}
+
+func (b *Background) SetFiles(files *FileAggregate) {
+	b.Files = files
+}
+
+func (b *Background) SetFlows(flows *FlowAggregate) {
+	b.Flows = flows
+}
+
+func (b *Background) AddAncestry(ancestry Process) {
+	b.Ancestry = append(b.Ancestry, ancestry)
+}
+
 // File Access Detection Event.
 
 type FileAccess struct {
-	Base
+	*Base
 	File File `json:"file"`
+}
+
+func (f *FileAccess) Clone() *FileAccess {
+	return &FileAccess{
+		Base: f.Base.Clone(),
+		File: f.File,
+	}
 }
 
 // Execution Detection Event.
 
 type Execution struct {
-	Base
+	*Base
 	Process Process `json:"process"`
 }
 
-// Network Flow Detection Event.
+func (e *Execution) Clone() *Execution {
+	return &Execution{
+		Base:    e.Base.Clone(),
+		Process: e.Process,
+	}
+}
+
+// Network Peers Detection Event.
+
+type NetworkPeer struct {
+	*Base
+	Flow Flow `json:"flow"`
+}
+
+func (n *NetworkPeer) Clone() NetworkPeer {
+	return NetworkPeer{
+		Base: n.Base.Clone(),
+		Flow: n.Flow,
+	}
+}
+
+// Network Flow Event.
 
 type NetworkFlow struct {
-	Base
+	*Base
 	Flow Flow `json:"flow"`
 }
 
 // Drop IP Detection Event.
 
 type DropIP struct {
-	Base
-	IP      string `json:"ip"`   // The IP that was dropped.
-	Dropped Flow   `json:"flow"` // The flow that was dropped.
+	*Base
+	IP   string `json:"ip"`   // The IP that was dropped.
+	Flow Flow   `json:"flow"` // The flow that triggered the drop.
+}
+
+func (d *DropIP) Clone() *DropIP {
+	return &DropIP{
+		Base: d.Base.Clone(),
+		IP:   d.IP,
+		Flow: d.Flow,
+	}
 }
 
 // Drop Domain Detection Event.
 
 type DropDomain struct {
-	Base
-	Domain string `json:"domain"` // The domain that was dropped.
-	Flow   Flow   `json:"flow"`   // The flow that triggered the resolution.
+	*Base
+	Domain string `json:"domain"` // The dropped resolution domain.
+	Flow   Flow   `json:"flow"`   // The resolution flow.
+}
+
+func (d *DropDomain) Clone() *DropDomain {
+	return &DropDomain{
+		Base:   d.Base.Clone(),
+		Domain: d.Domain,
+		Flow:   d.Flow,
+	}
 }
 
 // Process.
@@ -126,7 +218,7 @@ type File struct {
 // File Aggregates.
 
 type FileAggregate struct {
-	Root FSDir `json:"root"` // Root directory of the file tree.
+	Root *FSDir `json:"root"` // Root directory of the file tree.
 }
 
 type FSDir struct {
@@ -145,26 +237,26 @@ type FSFile struct {
 // Flow.
 
 type Flow struct {
-	IPVersion   int    `json:"ip_version"`   // IP version.
-	Proto       string `json:"proto"`        // Protocol.
-	ICMP        ICMP   `json:"icmp"`         // ICMP.
-	Local       Node   `json:"local"`        // Local node.
-	Remote      Node   `json:"remote"`       // Remote node.
-	ServicePort int    `json:"service_port"` // Service port.
-	Flags       Flags  `json:"flags"`        // Flags.
-	Phase       Phase  `json:"phase"`        // Flow phase.
+	IPVersion   int    `json:"ip_version"`             // IP version.
+	Proto       string `json:"proto"`                  // Protocol.
+	ICMP        *ICMP  `json:"icmp,omitempty"`         // ICMP.
+	Local       Node   `json:"local"`                  // Local node.
+	Remote      Node   `json:"remote"`                 // Remote node.
+	ServicePort int    `json:"service_port,omitempty"` // Service port.
+	Flags       *Flags `json:"flags,omitempty"`        // Flags.
+	Phase       *Phase `json:"phase,omitempty"`        // Flow phase.
 }
 
 type ICMP struct {
-	Type string `json:"type"` // ICMP type.
-	Code string `json:"code"` // ICMP code.
+	Type string `json:"type,omitempty"` // ICMP type.
+	Code string `json:"code,omitempty"` // ICMP code.
 }
 
 type Node struct {
-	Address string   `json:"address"` // IP address.
-	Name    string   `json:"name"`    // DNS name.
-	Names   []string `json:"names"`   // DNS names.
-	Port    int      `json:"port"`    // Port.
+	Address string   `json:"address,omitempty"` // IP address.
+	Name    string   `json:"name,omitempty"`    // DNS name.
+	Names   []string `json:"names,omitempty"`   // DNS names.
+	Port    int      `json:"port,omitempty"`    // Port.
 }
 
 type Flags struct {
@@ -180,10 +272,10 @@ type Flags struct {
 }
 
 type Phase struct {
-	Direction  string `json:"direction"`    // Direction of the flow.
-	InitatedBy string `json:"initiated_by"` // Who initiated the flow.
-	Status     string `json:"status"`       // Status of the flow.
-	EndedBy    string `json:"ended_by"`     // Who ended the flow.
+	Direction  string `json:"direction,omitempty"`    // Direction of the flow.
+	InitatedBy string `json:"initiated_by,omitempty"` // Who initiated the flow.
+	Status     string `json:"status,omitempty"`       // Status of the flow.
+	EndedBy    string `json:"ended_by,omitempty"`     // Who ended the flow.
 }
 
 // Flow Aggregates.
@@ -200,19 +292,19 @@ type FlowAggregate struct {
 
 type ProtocolAggregate struct {
 	Proto string                   `json:"proto"`           // Protocol (e.g., TCP, UDP, ICMP).
-	Pairs []ProtocolLocalRemoteAgg `json:"pairs"`           // List of unique local/remote node pairs for this protocol.
+	Pairs []ProtocolLocalRemoteAgg `json:"pairs,omitempty"` // List of unique local/remote node pairs for this protocol.
 	ICMPs []ICMP                   `json:"icmps,omitempty"` // ICMP types/codes if protocol is ICMP.
 }
 
 type ProtocolLocalRemoteAgg struct {
-	Nodes      LocalRemotePair `json:"nodes"`       // Local and remote nodes.
-	PortMatrix []PortCommAgg   `json:"port_matrix"` // All port communications between these nodes.
+	Nodes      LocalRemotePair `json:"nodes"`                 // Local and remote nodes.
+	PortMatrix []PortCommAgg   `json:"port_matrix,omitempty"` // All port communications between these nodes.
 }
 
 type ProtocolNode struct {
-	Address string   `json:"address"` // IP address.
-	Name    string   `json:"name"`    // DNS name.
-	Names   []string `json:"names"`   // DNS names.
+	Address string   `json:"address"`         // IP address.
+	Name    string   `json:"name"`            // DNS name.
+	Names   []string `json:"names,omitempty"` // DNS names.
 }
 
 type LocalRemotePair struct {
@@ -221,18 +313,18 @@ type LocalRemotePair struct {
 }
 
 type PortCommAgg struct {
-	SrcPort int   `json:"src_port"` // Source port.
-	DstPort int   `json:"dst_port"` // Destination port.
-	Phase   Phase `json:"phase"`    // Flow phase.
+	SrcPort int    `json:"src_port,omitempty"` // Source port.
+	DstPort int    `json:"dst_port,omitempty"` // Destination port.
+	Phase   *Phase `json:"phase,omitempty"`    // Flow phase.
 }
 
 // Habitat.
 
 type Habitat struct {
-	Distro       Distro       `json:"distro,omitempty"`       // Linux distribution.
-	Executable   Executable   `json:"executable,omitempty"`   // Executable.
+	Distro       *Distro      `json:"distro,omitempty"`       // Linux distribution.
+	Executable   *Executable  `json:"executable,omitempty"`   // Executable.
 	Dependencies []Dependency `json:"dependencies,omitempty"` // Dependencies.
-	Python       Python       `json:"python,omitempty"`       // Python.
+	Python       *Python      `json:"python,omitempty"`       // Python.
 }
 
 type Distro struct {
@@ -242,15 +334,15 @@ type Distro struct {
 }
 
 type Executable struct {
-	Path              string  `json:"path,omitempty"`                // Path.
-	Interpreter       string  `json:"interpreter,omitempty"`         // Interpreter.
-	Package           Package `json:"package,omitempty"`             // Package.
-	IsELF             bool    `json:"is_elf,omitempty"`              // Is ELF binary ?
-	IsStatic          bool    `json:"is_static,omitempty"`           // Is static binary ?
-	IsDynamic         bool    `json:"is_dynamic,omitempty"`          // Is dynamic binary ?
-	IsScript          bool    `json:"is_script,omitempty"`           // Is script ?
-	IsSupportedScript bool    `json:"is_supported_script,omitempty"` // Is supported script ?
-	ScriptType        string  `json:"script_type,omitempty"`         // Script type (e.g., "bash", "python", etc.).
+	Path              string   `json:"path,omitempty"`                // Path.
+	Interpreter       string   `json:"interpreter,omitempty"`         // Interpreter.
+	Package           *Package `json:"package,omitempty"`             // Package.
+	IsELF             bool     `json:"is_elf,omitempty"`              // Is ELF binary ?
+	IsStatic          bool     `json:"is_static,omitempty"`           // Is static binary ?
+	IsDynamic         bool     `json:"is_dynamic,omitempty"`          // Is dynamic binary ?
+	IsScript          bool     `json:"is_script,omitempty"`           // Is script ?
+	IsSupportedScript bool     `json:"is_supported_script,omitempty"` // Is supported script ?
+	ScriptType        string   `json:"script_type,omitempty"`         // Script type (e.g., "bash", "python", etc.).
 }
 
 type Package struct {
