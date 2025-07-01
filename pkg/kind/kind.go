@@ -1,6 +1,7 @@
 package kind
 
 import (
+	"regexp"
 	"strings"
 )
 
@@ -17,18 +18,13 @@ import (
 // The "flows" kind is duplicated with "flow" being created in detect plugin now.
 // TODO: use just "flow" after listendev printer is gone.
 
+// The regex is used to replace all special characters with underscores.
+var normalizeRegexp = regexp.MustCompile(`[.\-\/\\:;,|()\[\]{}<>'"` + "`" + `~!@#$%^&*?=+\n\r\t\v ]`)
+
 func NormalizeString(s string) string {
-	created := s
-	created = strings.ToLower(created)
-	created = strings.TrimSpace(created)
-	created = strings.ReplaceAll(created, "/", "_")
-	created = strings.ReplaceAll(created, ".", "_")
-	created = strings.ReplaceAll(created, "\n", "")
-	created = strings.ReplaceAll(created, "\r", "")
-	created = strings.ReplaceAll(created, "\t", "")
-	created = strings.ReplaceAll(created, "\v", "")
-	created = strings.ReplaceAll(created, " ", "_")
-	return created
+	s = strings.ToLower(strings.TrimSpace(s))
+	s = normalizeRegexp.ReplaceAllString(s, "_")
+	return s
 }
 
 const (
