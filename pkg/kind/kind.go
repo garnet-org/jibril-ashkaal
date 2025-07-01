@@ -21,6 +21,8 @@ func NormalizeString(s string) string {
 	created := s
 	created = strings.ToLower(created)
 	created = strings.TrimSpace(created)
+	created = strings.ReplaceAll(created, "/", "_")
+	created = strings.ReplaceAll(created, ".", "_")
 	created = strings.ReplaceAll(created, "\n", "")
 	created = strings.ReplaceAll(created, "\r", "")
 	created = strings.ReplaceAll(created, "\t", "")
