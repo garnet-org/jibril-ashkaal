@@ -126,8 +126,8 @@ type NetworkPeer struct {
 	Flow Flow `json:"flow"`
 }
 
-func (n *NetworkPeer) Clone() NetworkPeer {
-	return NetworkPeer{
+func (n *NetworkPeer) Clone() *NetworkPeer {
+	return &NetworkPeer{
 		Base: n.Base.Clone(),
 		Flow: n.Flow,
 	}

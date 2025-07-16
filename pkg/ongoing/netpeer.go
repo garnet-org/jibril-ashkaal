@@ -8,12 +8,12 @@ import (
 )
 
 type OnGoingNetworkPeer struct {
-	NetworkPeer NetworkPeer
+	NetworkPeer *NetworkPeer
 	private     map[string]any
 	mutex       sync.RWMutex
 }
 
-func NewOnGoingNetworkPeer(given NetworkPeer) *OnGoingNetworkPeer {
+func NewOnGoingNetworkPeer(given *NetworkPeer) *OnGoingNetworkPeer {
 	return &OnGoingNetworkPeer{
 		NetworkPeer: given,
 		private:     make(map[string]any),
@@ -72,6 +72,6 @@ func (g *OnGoingNetworkPeer) Serialize() []byte {
 func (g *OnGoingNetworkPeer) Destroy() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.NetworkPeer = NetworkPeer{}
+	g.NetworkPeer = &NetworkPeer{}
 	g.private = nil
 }
