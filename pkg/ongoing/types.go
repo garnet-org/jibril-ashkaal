@@ -185,9 +185,11 @@ type Process struct {
 	Cmd        string `json:"cmd"`                   // The command.
 	Exe        string `json:"exe"`                   // The executable name.
 	Args       string `json:"args"`                  // The arguments.
+	Envs       string `json:"envs"`                  // The environment variables.
 	Loader     string `json:"loader,omitempty"`      // The loader name.
 	PrevExe    string `json:"prev_exe,omitempty"`    // The previous executable name.
 	PrevArgs   string `json:"prev_args,omitempty"`   // The previous arguments.
+	PrevEnvs   string `json:"prev_envs,omitempty"`   // The previous environment variables.
 	PrevLoader string `json:"prev_loader,omitempty"` // The previous loader name.
 }
 

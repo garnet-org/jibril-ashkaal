@@ -50,6 +50,7 @@ const (
 	TaskComm
 	TaskCmd
 	TaskArgs
+	TaskEnvs
 	TaskStart
 	TaskExit
 	ParentPID
@@ -57,12 +58,14 @@ const (
 	ParentComm
 	ParentCmd
 	ParentArgs
+	ParentEnvs
 	ParentOrPrevExe
 	TaskOrPrevExe
 	TaskOrParentExe
 	TaskOrParentComm
 	TaskOrParentCmd
 	TaskOrParentArgs
+	TaskOrParentEnvs
 	FlowProto
 	FlowFamily
 	FlowLocal
@@ -75,6 +78,7 @@ const (
 	AnyAncientExe
 	AnyAncientCmd
 	AnyAncientArgs
+	AnyAncientEnvs
 )
 
 func (a ArbitraryWhat) String() string {
@@ -95,6 +99,8 @@ func (a ArbitraryWhat) String() string {
 		return "Command"
 	case TaskArgs:
 		return "Args"
+	case TaskEnvs:
+		return "Envs"
 	case TaskStart:
 		return "StartTime"
 	case TaskExit:
@@ -109,6 +115,8 @@ func (a ArbitraryWhat) String() string {
 		return "ParentCommand"
 	case ParentArgs:
 		return "ParentArgs"
+	case ParentEnvs:
+		return "ParentEnvs"
 	case ParentOrPrevExe:
 		return "ParentOrPrevExe"
 	case TaskOrPrevExe:
@@ -121,6 +129,8 @@ func (a ArbitraryWhat) String() string {
 		return "TaskOrParentCmd"
 	case TaskOrParentArgs:
 		return "TaskOrParentArgs"
+	case TaskOrParentEnvs:
+		return "TaskOrParentEnvs"
 	case FlowLocal:
 		return "LocalPeer"
 	case FlowRemote:
@@ -141,6 +151,8 @@ func (a ArbitraryWhat) String() string {
 		return "AnyAncientCmd"
 	case AnyAncientArgs:
 		return "AnyAncientArgs"
+	case AnyAncientEnvs:
+		return "AnyAncientEnvs"
 	}
 	return "Unknown"
 }
