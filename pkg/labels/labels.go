@@ -61,6 +61,7 @@ const (
 	BreedFileAccess
 	BreedRemoteCIDRs
 	BreedRemoteDomains
+	BreedEnvVars
 	BreedEnd
 )
 
@@ -76,6 +77,8 @@ func (b Breed) String() string {
 		return "remote_cidrs"
 	case BreedRemoteDomains:
 		return "remote_domains"
+	case BreedEnvVars:
+		return "env_vars"
 	default:
 		return "none"
 	}
@@ -94,6 +97,7 @@ const (
 	MechFileAccessAndExecution
 	MechNetworkPeers
 	MechNetworkFlows
+	MechEnvVars
 	MechEnd
 )
 
@@ -111,6 +115,8 @@ func (m Mechanism) String() string {
 		return "network_peers"
 	case MechNetworkFlows:
 		return "network_flows"
+	case MechEnvVars:
+		return "env_vars"
 	default:
 		return "none"
 	}
