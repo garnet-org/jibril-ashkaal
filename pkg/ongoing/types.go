@@ -196,25 +196,59 @@ type Process struct {
 // File.
 
 type File struct {
-	File     string `json:"file"`     // The absolute path to the file.
-	Dir      string `json:"dir"`      // The directory of the file.
-	Base     string `json:"basename"` // The base name of the file.
-	Actions  string `json:"actions"`  // The actions that have been performed on the file.
-	Fasync   bool   `json:"fasync"`   // An async I/O has been performed on the file.
-	Flock    bool   `json:"flock"`    // A flock has been performed on the file.
-	Fsync    bool   `json:"fsync"`    // A fsync has been performed on the file.
-	Llseek   bool   `json:"llseek"`   // A llseek has been performed on the file.
-	Mmap     bool   `json:"mmap"`     // A mmap has been performed on the file.
-	Open     bool   `json:"open"`     // A open has been performed on the file.
-	Read     bool   `json:"read"`     // A read has been performed on the file.
-	Write    bool   `json:"write"`    // A write has been performed on the file.
-	Rename   bool   `json:"rename"`   // A rename has been performed on the file.
-	Truncate bool   `json:"truncate"` // A truncate has been performed on the file.
-	Unlink   bool   `json:"unlink"`   // A unlink has been performed on the file.
-	Create   bool   `json:"create"`   // A create has been performed on the file.
-	Close    bool   `json:"close"`    // A close has been performed on the file.
-	Link     bool   `json:"link"`     // A link has been performed on the file.
-	Execve   bool   `json:"execve"`   // A execve has been performed on the file.
+	// Basic file identity.
+	Path string `json:"path"`     // Absolute path to the file.
+	Dir  string `json:"dir"`      // Directory containing the file.
+	Base string `json:"basename"` // Base name of the file.
+
+	// Action booleans (quick access for common queries).
+	Actions  []string `json:"actions"`  // List of actions performed on the file.
+	Open     bool     `json:"open"`     // File was opened.
+	Read     bool     `json:"read"`     // File was read.
+	Write    bool     `json:"write"`    // File was written.
+	Exec     bool     `json:"exec"`     // File was executed (execve).
+	Create   bool     `json:"create"`   // File was created.
+	Unlink   bool     `json:"unlink"`   // File was deleted (unlinked).
+	Rename   bool     `json:"rename"`   // File was renamed.
+	Link     bool     `json:"link"`     // File was hardlinked.
+	Truncate bool     `json:"truncate"` // File was truncated.
+	Fsync    bool     `json:"fsync"`    // File was fsynced.
+	Flock    bool     `json:"flock"`    // File was flocked.
+	Mmap     bool     `json:"mmap"`     // File was mmapped.
+	Close    bool     `json:"close"`    // File was closed.
+	Async    bool     `json:"async"`    // Async I/O performed.
+	Seek     bool     `json:"seek"`     // File was llseeked.
+
+	// File type and permissions (human readable).
+	Type     string `json:"type"`      // File type: regular, directory, symlink, socket, block, char, fifo.
+	Mode     string `json:"mode"`      // File mode as string (e.g., "rwxr-xr-x").
+	OwnerUID uint32 `json:"owner_uid"` // User ID of owner.
+	OwnerGID uint32 `json:"owner_gid"` // Group ID of owner.
+	// OwnerName string `json:"owner_name,omitempty"` // (If available) Username of owner.
+	// GroupName string `json:"group_name,omitempty"` // (If available) Group name of owner.
+
+	// Permission flags (quick access).
+	Setuid     bool `json:"setuid"`      // Setuid bit set.
+	Setgid     bool `json:"setgid"`      // Setgid bit set.
+	Sticky     bool `json:"sticky"`      // Sticky bit set.
+	OwnerRead  bool `json:"owner_read"`  // Owner can read.
+	OwnerWrite bool `json:"owner_write"` // Owner can write.
+	OwnerExec  bool `json:"owner_exec"`  // Owner can execute.
+	GroupRead  bool `json:"group_read"`  // Group can read.
+	GroupWrite bool `json:"group_write"` // Group can write.
+	GroupExec  bool `json:"group_exec"`  // Group can execute.
+	OtherRead  bool `json:"other_read"`  // Others can read.
+	OtherWrite bool `json:"other_write"` // Others can write.
+	OtherExec  bool `json:"other_exec"`  // Others can execute.
+
+	// Inode and device.
+	Inode uint64 `json:"inode"` // Inode number.
+	Size  int64  `json:"size"`  // File size in bytes.
+
+	// Timestamps (RFC3339).
+	AccessTime   string `json:"atime"`  // Last access time.
+	ChangeTime   string `json:"mtime"`  // Last modification time.
+	CreationTime string `json:"crtime"` // Creation time.
 }
 
 // File Aggregates.
@@ -224,16 +258,23 @@ type FileAggregate struct {
 }
 
 type FSDir struct {
-	AbsPath  string   `json:"abs_path,omitempty"`  // Absolute path of the directory.
-	BaseName string   `json:"base_name,omitempty"` // Base name of the directory.
-	Dirs     []FSDir  `json:"dirs,omitempty"`      // Subdirectories.
-	Files    []FSFile `json:"files,omitempty"`     // Files in this directory.
+	Path  string   `json:"path,omitempty"`  // Absolute path of the directory.
+	Base  string   `json:"base,omitempty"`  // Base name of the directory.
+	Dirs  []FSDir  `json:"dirs,omitempty"`  // Subdirectories.
+	Files []FSFile `json:"files,omitempty"` // Files in this directory.
 }
 
 type FSFile struct {
-	AbsPath  string   `json:"abs_path,omitempty"`  // Absolute path of the file.
-	BaseName string   `json:"base_name,omitempty"` // Base name of the file.
-	Actions  []string `json:"actions,omitempty"`   // Actions taken on the file.
+	Path         string   `json:"path,omitempty"`      // Absolute path of the file.
+	Base         string   `json:"base,omitempty"`      // Base name of the file.
+	Actions      []string `json:"actions,omitempty"`   // Actions taken on the file.
+	Mode         string   `json:"mode,omitempty"`      // File mode.
+	OwnerUID     uint32   `json:"owner_uid,omitempty"` // User ID of owner.
+	OwnerGID     uint32   `json:"owner_gid,omitempty"` // Group ID of owner.
+	Size         int64    `json:"size,omitempty"`      // File size in bytes.
+	AccessTime   string   `json:"atime"`               // Last access time.
+	ChangeTime   string   `json:"mtime"`               // Last modification time.
+	CreationTime string   `json:"crtime"`              // Creation time.
 }
 
 // Flow.

@@ -203,6 +203,16 @@ func (fa FileAction) String() string {
 	return str
 }
 
+func (fa FileAction) StringList() []string {
+	actions := []string{}
+	for i := 0; i < len(fileActionStrings); i++ {
+		if fa.HasAction(FileAction(1 << i)) {
+			actions = append(actions, fileActionStrings[i])
+		}
+	}
+	return actions // TODO: return a copy.
+}
+
 func (fa FileAction) HasAction(action FileAction) bool {
 	return fa&action != 0
 }
