@@ -197,11 +197,49 @@ type Process struct {
 
 type File struct {
 	// Basic file identity.
-	Path string `json:"path"`     // Absolute path to the file.
-	Dir  string `json:"dir"`      // Directory containing the file.
-	Base string `json:"basename"` // Base name of the file.
+	Path        string          `json:"path"`        // Absolute path to the file.
+	Dir         string          `json:"dir"`         // Directory containing the file.
+	Base        string          `json:"basename"`    // Base name of the file.
+	Type        string          `json:"type"`        // File type: regular, directory, symlink, socket, block, char, fifo.
+	Owner       FileOwner       `json:"owner"`       // File owner.
+	Actions     FileActions     `json:"actions"`     // Detailed actions performed on the file.
+	Permissions FilePermissions `json:"permissions"` // File permissions.
+	SpecialBits FileSpecialBits `json:"special"`     // Special permission bits.
+	Metadata    FileMetadata    `json:"metadata"`    // File metadata.
+}
 
-	// Action booleans (quick access for common queries).
+type FileOwner struct {
+	UID uint32 `json:"uid"` // User ID of owner.
+	GID uint32 `json:"gid"` // Group ID of owner.
+}
+
+type FileSpecialBits struct {
+	Setuid bool `json:"setuid"` // Setuid bit set.
+	Setgid bool `json:"setgid"` // Setgid bit set.
+	Sticky bool `json:"sticky"` // Sticky bit set.
+}
+
+type FilePermissions struct {
+	Mode       string `json:"mode"`        // File mode as string (e.g., "rwxr-xr-x").
+	OwnerRead  bool   `json:"owner_read"`  // Owner can read.
+	OwnerWrite bool   `json:"owner_write"` // Owner can write.
+	OwnerExec  bool   `json:"owner_exec"`  // Owner can execute.
+	GroupRead  bool   `json:"group_read"`  // Group can read.
+	GroupWrite bool   `json:"group_write"` // Group can write.
+	GroupExec  bool   `json:"group_exec"`  // Group can execute.
+	OtherRead  bool   `json:"other_read"`  // Others can read.
+	OtherWrite bool   `json:"other_write"` // Others can write.
+	OtherExec  bool   `json:"other_exec"`  // Others can execute.
+}
+
+type FileMetadata struct {
+	Size     int64  `json:"size"`     // File size in bytes.
+	Access   string `json:"access"`   // Last access time.
+	Change   string `json:"change"`   // Last modification time.
+	Creation string `json:"creation"` // Creation time.
+}
+
+type FileActions struct {
 	Actions  []string `json:"actions"`  // List of actions performed on the file.
 	Open     bool     `json:"open"`     // File was opened.
 	Read     bool     `json:"read"`     // File was read.
@@ -218,37 +256,6 @@ type File struct {
 	Close    bool     `json:"close"`    // File was closed.
 	Async    bool     `json:"async"`    // Async I/O performed.
 	Seek     bool     `json:"seek"`     // File was llseeked.
-
-	// File type and permissions (human readable).
-	Type     string `json:"type"`      // File type: regular, directory, symlink, socket, block, char, fifo.
-	Mode     string `json:"mode"`      // File mode as string (e.g., "rwxr-xr-x").
-	OwnerUID uint32 `json:"owner_uid"` // User ID of owner.
-	OwnerGID uint32 `json:"owner_gid"` // Group ID of owner.
-	// OwnerName string `json:"owner_name,omitempty"` // (If available) Username of owner.
-	// GroupName string `json:"group_name,omitempty"` // (If available) Group name of owner.
-
-	// Permission flags (quick access).
-	Setuid     bool `json:"setuid"`      // Setuid bit set.
-	Setgid     bool `json:"setgid"`      // Setgid bit set.
-	Sticky     bool `json:"sticky"`      // Sticky bit set.
-	OwnerRead  bool `json:"owner_read"`  // Owner can read.
-	OwnerWrite bool `json:"owner_write"` // Owner can write.
-	OwnerExec  bool `json:"owner_exec"`  // Owner can execute.
-	GroupRead  bool `json:"group_read"`  // Group can read.
-	GroupWrite bool `json:"group_write"` // Group can write.
-	GroupExec  bool `json:"group_exec"`  // Group can execute.
-	OtherRead  bool `json:"other_read"`  // Others can read.
-	OtherWrite bool `json:"other_write"` // Others can write.
-	OtherExec  bool `json:"other_exec"`  // Others can execute.
-
-	// Inode and device.
-	Inode uint64 `json:"inode"` // Inode number.
-	Size  int64  `json:"size"`  // File size in bytes.
-
-	// Timestamps (RFC3339).
-	AccessTime   string `json:"atime"`  // Last access time.
-	ChangeTime   string `json:"mtime"`  // Last modification time.
-	CreationTime string `json:"crtime"` // Creation time.
 }
 
 // File Aggregates.
@@ -265,16 +272,12 @@ type FSDir struct {
 }
 
 type FSFile struct {
-	Path         string   `json:"path,omitempty"`      // Absolute path of the file.
-	Base         string   `json:"base,omitempty"`      // Base name of the file.
-	Actions      []string `json:"actions,omitempty"`   // Actions taken on the file.
-	Mode         string   `json:"mode,omitempty"`      // File mode.
-	OwnerUID     uint32   `json:"owner_uid,omitempty"` // User ID of owner.
-	OwnerGID     uint32   `json:"owner_gid,omitempty"` // Group ID of owner.
-	Size         int64    `json:"size,omitempty"`      // File size in bytes.
-	AccessTime   string   `json:"atime"`               // Last access time.
-	ChangeTime   string   `json:"mtime"`               // Last modification time.
-	CreationTime string   `json:"crtime"`              // Creation time.
+	Path     string       `json:"path,omitempty"`     // Absolute path of the file.
+	Base     string       `json:"base,omitempty"`     // Base name of the file.
+	Actions  []string     `json:"actions,omitempty"`  // Actions taken on the file.
+	Mode     string       `json:"mode,omitempty"`     // File mode.
+	Owner    FileOwner    `json:"owner,omitempty"`    // File owner.
+	Metadata FileMetadata `json:"metadata,omitempty"` // File metadata.
 }
 
 // Flow.
