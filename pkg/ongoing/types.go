@@ -144,31 +144,17 @@ type NetworkFlow struct {
 
 type DropIP struct {
 	*Base
-	IP   string `json:"ip"`   // The IP that was dropped.
-	Flow Flow   `json:"flow"` // The flow that triggered the drop.
+	IP    string   `json:"ip"`    // The IP that was dropped.
+	Names []string `json:"names"` // The names of the IP.
+	Flow  Flow     `json:"flow"`  // The flow that triggered the drop.
 }
 
 func (d *DropIP) Clone() *DropIP {
 	return &DropIP{
-		Base: d.Base.Clone(),
-		IP:   d.IP,
-		Flow: d.Flow,
-	}
-}
-
-// Drop Domain Detection Event.
-
-type DropDomain struct {
-	*Base
-	Domain string `json:"domain"` // The dropped resolution domain.
-	Flow   Flow   `json:"flow"`   // The resolution flow.
-}
-
-func (d *DropDomain) Clone() *DropDomain {
-	return &DropDomain{
-		Base:   d.Base.Clone(),
-		Domain: d.Domain,
-		Flow:   d.Flow,
+		Base:  d.Base.Clone(),
+		IP:    d.IP,
+		Names: d.Names,
+		Flow:  d.Flow,
 	}
 }
 
