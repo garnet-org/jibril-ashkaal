@@ -74,9 +74,10 @@ type Attenuator struct {
 // Context.
 
 type Background struct {
-	Files    *FileAggregate `json:"files,omitempty"`
-	Flows    *FlowAggregate `json:"flows,omitempty"`
-	Ancestry []Process      `json:"ancestry,omitempty"`
+	Files      *FileAggregate      `json:"files,omitempty"`
+	Flows      *FlowAggregate      `json:"flows,omitempty"`
+	Containers *ContainerAggregate `json:"containers,omitempty"`
+	Ancestry   []Process           `json:"ancestry,omitempty"`
 }
 
 func (b *Background) SetFiles(files *FileAggregate) {
@@ -161,22 +162,34 @@ func (d *DropIP) Clone() *DropIP {
 // Process.
 
 type Process struct {
-	Start      string `json:"start"`                 // The start time of the process.
-	Exit       string `json:"exit"`                  // The exit time of the process.
-	Code       int    `json:"retcode"`               // The return code of the process.
-	UID        uint   `json:"uid"`                   // The user ID of the process.
-	Pid        int    `json:"pid"`                   // The process ID.
-	Ppid       int    `json:"ppid"`                  // The parent process ID.
-	Comm       string `json:"comm"`                  // The command name.
-	Cmd        string `json:"cmd"`                   // The command.
-	Exe        string `json:"exe"`                   // The executable name.
-	Args       string `json:"args"`                  // The arguments.
-	Envs       string `json:"envs"`                  // The environment variables.
-	Loader     string `json:"loader,omitempty"`      // The loader name.
-	PrevExe    string `json:"prev_exe,omitempty"`    // The previous executable name.
-	PrevArgs   string `json:"prev_args,omitempty"`   // The previous arguments.
-	PrevEnvs   string `json:"prev_envs,omitempty"`   // The previous environment variables.
-	PrevLoader string `json:"prev_loader,omitempty"` // The previous loader name.
+	Start      string     `json:"start"`                 // The start time of the process.
+	Exit       string     `json:"exit"`                  // The exit time of the process.
+	Code       int        `json:"retcode"`               // The return code of the process.
+	UID        uint       `json:"uid"`                   // The user ID of the process.
+	Pid        int        `json:"pid"`                   // The process ID.
+	Ppid       int        `json:"ppid"`                  // The parent process ID.
+	Comm       string     `json:"comm"`                  // The command name.
+	Cmd        string     `json:"cmd"`                   // The command.
+	Exe        string     `json:"exe"`                   // The executable name.
+	Args       string     `json:"args"`                  // The arguments.
+	Envs       string     `json:"envs"`                  // The environment variables.
+	Loader     string     `json:"loader,omitempty"`      // The loader name.
+	PrevExe    string     `json:"prev_exe,omitempty"`    // The previous executable name.
+	PrevArgs   string     `json:"prev_args,omitempty"`   // The previous arguments.
+	PrevEnvs   string     `json:"prev_envs,omitempty"`   // The previous environment variables.
+	PrevLoader string     `json:"prev_loader,omitempty"` // The previous loader name.
+	Namespaces Namespaces `json:"namespaces,omitempty"`  // The namespaces.
+}
+
+// Namespaces.
+
+type Namespaces struct {
+	MNTNs    uint32 `json:"mnt_ns,omitempty"`    // Mount namespace.
+	PIDNs    uint32 `json:"pid_ns,omitempty"`    // PID namespace.
+	UTSNs    uint32 `json:"uts_ns,omitempty"`    // UTS namespace.
+	IPCNs    uint32 `json:"ipc_ns,omitempty"`    // IPC namespace.
+	NetNs    uint32 `json:"net_ns,omitempty"`    // Network namespace.
+	CgroupNs uint32 `json:"cgroup_ns,omitempty"` // Cgroup namespace.
 }
 
 // File.
@@ -396,4 +409,65 @@ type Python struct {
 type PythonModule struct {
 	Name    string `json:"name,omitempty"`    // Name.
 	Version string `json:"version,omitempty"` // Version.
+}
+
+// Containers and Namespaces
+
+type ContainerAggregate struct {
+	MntNamespaceIDs    []ContainerPair `json:"mnt_namespace_ids,omitempty"`
+	PidNamespaceIDs    []ContainerPair `json:"pid_namespace_ids,omitempty"`
+	UtsNamespaceIDs    []ContainerPair `json:"uts_namespace_ids,omitempty"`
+	IpcNamespaceIDs    []ContainerPair `json:"ipc_namespace_ids,omitempty"`
+	NetNamespaceIDs    []ContainerPair `json:"net_namespace_ids,omitempty"`
+	CgroupNamespaceIDs []ContainerPair `json:"cgroup_namespace_ids,omitempty"`
+	Containers         []Container     `json:"containers,omitempty"`
+}
+
+type ContainerPair struct {
+	Name string `json:"name"`
+	ID   string `json:"id"`
+}
+
+func (c *ContainerPair) GetName() string {
+	return c.Name
+}
+
+func (c *ContainerPair) GetID() string {
+	return c.ID
+}
+
+type Mount struct {
+	Source      string `json:"source,omitempty"`
+	Destination string `json:"destination,omitempty"`
+	Type        string `json:"type,omitempty"`
+}
+
+type Container struct {
+	ID           string     `json:"id"`                      // Container ID.
+	Name         string     `json:"name,omitempty"`          // Container name.
+	HostName     string     `json:"hostname,omitempty"`      // Host name.
+	ImageID      string     `json:"image_id,omitempty"`      // Image ID.
+	Image        string     `json:"image,omitempty"`         // Image name.
+	Version      string     `json:"version,omitempty"`       // Image version.
+	Runtime      string     `json:"runtime,omitempty"`       // Container runtime ("docker", "containerd", etc).
+	Driver       string     `json:"driver,omitempty"`        // Container driver ("overlay2", "aufs", etc).
+	PID          int        `json:"pid,omitempty"`           // Process ID.
+	ExitCode     int        `json:"exit_code,omitempty"`     // Exit code.
+	Status       string     `json:"status,omitempty"`        // Current status.
+	IsAttached   bool       `json:"is_attached,omitempty"`   // Whether the container is attached to the host.
+	Path         string     `json:"path,omitempty"`          // Path to the container executable.
+	Cwd          string     `json:"cwd,omitempty"`           // Current working directory.
+	CreatedAt    string     `json:"created_at,omitempty"`    // Creation time, RFC3339 string.
+	StartedAt    string     `json:"started_at,omitempty"`    // Start time, RFC3339 string.
+	FinishedAt   string     `json:"finished_at,omitempty"`   // Finish time, RFC3339 string.
+	Mounts       []Mount    `json:"mounts,omitempty"`        // Mounts.
+	NetworkMode  string     `json:"network_mode,omitempty"`  // Network mode.
+	CgroupnsMode string     `json:"cgroupns_mode,omitempty"` // Cgroup namespace mode.
+	IpcMode      string     `json:"ipc_mode,omitempty"`      // IPC mode.
+	PidMode      string     `json:"pid_mode,omitempty"`      // PID mode.
+	UsernsMode   string     `json:"userns_mode,omitempty"`   // User namespace mode.
+	UTSMode      string     `json:"uts_mode,omitempty"`      // UTS namespace mode.
+	Env          []string   `json:"env,omitempty"`           // Environment variables.
+	Cmd          []string   `json:"cmd,omitempty"`           // Command.
+	Namespaces   Namespaces `json:"namespaces,omitempty"`    // Namespaces.
 }
