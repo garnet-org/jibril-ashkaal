@@ -58,7 +58,17 @@ type Metadata struct {
 	Documentation string `json:"documentation,omitempty"` // Detection event documentation.
 	Tactic        string `json:"tactic,omitempty"`        // Detection event MITRE tactic.
 	Technique     string `json:"technique,omitempty"`     // Detection event MITRE technique.
-	SubTechnique  string `json:"subtechnique,omitempty"`  // Detection event MITREsubtechnique.
+	SubTechnique  string `json:"subtechnique,omitempty"`  // Detection event MITRE subtechnique.
+	Score         Score  `json:"score,omitempty"`         // Detection Security Risk Score.
+}
+
+// Security Risk Score.
+
+type Score struct {
+	Source     string  `json:"source,omitempty"` // Source and reason of the score.
+	Severity   string  `json:"severity"`         // Severity is the classification of the detection.
+	Confidence string  `json:"confidence"`       // Confidence percentage of the detection.
+	RiskScore  float64 `json:"risk_score"`       // Calculated and rounded up risk score of the detection.
 }
 
 // Attenuator.
