@@ -1,6 +1,8 @@
 package labels
 
 import (
+	"fmt"
+
 	"github.com/garnet-org/jibril-ashkaal/pkg/kind"
 )
 
@@ -21,30 +23,102 @@ type Metadata struct {
 }
 
 //
-// Importance.
+// Severity (old Importance, now deprecated).
 //
 
-type Importance int
+type Severity int
 
 const (
-	ImportanceNone Importance = iota
-	ImportanceLow
-	ImportanceMedium
-	ImportanceHigh
-	ImportanceCritical
-	ImportanceEnd
+	SeverityNone Severity = iota
+	SeverityLow
+	SeverityMedium
+	SeverityHigh
+	SeverityCritical
+	SeverityEnd
 )
 
-func (p Importance) String() string {
+func (p Severity) String() string {
 	switch p {
-	case ImportanceLow:
+	case SeverityLow:
 		return "low"
-	case ImportanceMedium:
+	case SeverityMedium:
 		return "medium"
-	case ImportanceHigh:
+	case SeverityHigh:
 		return "high"
-	case ImportanceCritical:
+	case SeverityCritical:
 		return "critical"
+	default:
+		return "none"
+	}
+}
+
+func (i Severity) Response() Response {
+	switch i {
+	case SeverityLow:
+		return ResponseIgnore
+	case SeverityMedium:
+		return ResponseMonitor
+	case SeverityHigh:
+		return ResponseInvestigate
+	case SeverityCritical:
+		return ResponseIncident
+	default:
+		return ResponseNone
+	}
+}
+
+//
+// Confidence (from 0.00 to 1.00).
+//
+
+type Confidence float64
+
+func (c Confidence) String() string {
+	return fmt.Sprintf("%d%%", int(c*100.0))
+}
+
+func (c Confidence) Severity() Severity {
+	if c < 0 {
+		return SeverityNone
+	}
+	if c < 0.29 {
+		return SeverityLow
+	}
+	if c < 0.59 {
+		return SeverityMedium
+	}
+	if c < 0.79 {
+		return SeverityHigh
+	}
+	return SeverityCritical
+}
+
+//
+// Response.
+//
+
+type Response int
+
+const (
+	ResponseNone Response = iota
+	ResponseIgnore
+	ResponseMonitor
+	ResponseInvestigate
+	ResponseIncident
+)
+
+func (r Response) String() string {
+	switch r {
+	case ResponseNone:
+		return "none"
+	case ResponseIgnore:
+		return "ignore"
+	case ResponseMonitor:
+		return "monitor"
+	case ResponseInvestigate:
+		return "investigate"
+	case ResponseIncident:
+		return "incident"
 	default:
 		return "none"
 	}
