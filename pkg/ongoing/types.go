@@ -64,10 +64,11 @@ type Metadata struct {
 // Security Risk Score.
 
 type Score struct {
-	Source     string  `json:"source,omitempty"` // Source and reason of the score.
-	Severity   string  `json:"severity"`         // Severity is the classification of the detection.
-	Confidence float64 `json:"confidence"`       // Confidence percentage of the detection.
-	RiskScore  float64 `json:"risk_score"`       // Calculated and rounded up risk score of the detection.
+	Source        string  `json:"source,omitempty"` // Source and reason of the score.
+	Severity      int     `json:"severity"`         // Severity number of the detection.
+	SeverityLevel string  `json:"severity_level"`   // Severity level of the detection.
+	Confidence    float64 `json:"confidence"`       // Confidence percentage of the detection.
+	RiskScore     float64 `json:"risk_score"`       // Calculated and rounded up risk score of the detection.
 }
 
 // Attenuator.

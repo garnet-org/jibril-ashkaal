@@ -23,74 +23,81 @@ type Metadata struct {
 }
 
 //
-// Severity (old Importance, now deprecated).
+// Severity (a number from 0 to 100).
 //
+
+type SeverityLevel int
+
+const (
+	SeverityNone     SeverityLevel = iota
+	SeverityLow      SeverityLevel = 29
+	SeverityMedium   SeverityLevel = 59
+	SeverityHigh     SeverityLevel = 79
+	SeverityCritical SeverityLevel = 100
+)
+
+func (s SeverityLevel) String() string {
+	if s <= SeverityNone {
+		return "none"
+	}
+	if s <= SeverityLow {
+		return "low"
+	}
+	if s <= SeverityMedium {
+		return "medium"
+	}
+	if s <= SeverityHigh {
+		return "high"
+	}
+	return "critical"
+}
+
+func (s SeverityLevel) Level() SeverityLevel {
+	if s <= SeverityNone {
+		return SeverityNone
+	}
+	if s <= SeverityLow {
+		return SeverityLow
+	}
+	if s <= SeverityMedium {
+		return SeverityMedium
+	}
+	if s <= SeverityHigh {
+		return SeverityHigh
+	}
+	return SeverityCritical
+}
 
 type Severity int
 
-const (
-	SeverityNone Severity = iota
-	SeverityLow
-	SeverityMedium
-	SeverityHigh
-	SeverityCritical
-	SeverityEnd
-)
-
-func (p Severity) String() string {
-	switch p {
-	case SeverityLow:
-		return "low"
-	case SeverityMedium:
-		return "medium"
-	case SeverityHigh:
-		return "high"
-	case SeverityCritical:
-		return "critical"
-	default:
-		return "none"
-	}
+func (p Severity) Level() SeverityLevel {
+	return SeverityLevel(p).Level()
 }
 
-func (i Severity) Response() Response {
-	switch i {
-	case SeverityLow:
-		return ResponseIgnore
-	case SeverityMedium:
-		return ResponseMonitor
-	case SeverityHigh:
-		return ResponseInvestigate
-	case SeverityCritical:
-		return ResponseIncident
-	default:
-		return ResponseNone
-	}
+func (p Severity) String() string {
+	return SeverityLevel(p).String()
+}
+
+func (p Severity) Float64() float64 {
+	return float64(p)
+}
+
+func (p Severity) Int() int {
+	return int(p)
 }
 
 //
-// Confidence (from 0.00 to 1.00).
+// Confidence (a float from 0.0 to 1.0).
 //
 
 type Confidence float64
 
 func (c Confidence) String() string {
-	return fmt.Sprintf("%d%%", int(c*100.0))
+	return fmt.Sprintf("%.2f", c)
 }
 
-func (c Confidence) Severity() Severity {
-	if c < 0 {
-		return SeverityNone
-	}
-	if c < 0.29 {
-		return SeverityLow
-	}
-	if c < 0.59 {
-		return SeverityMedium
-	}
-	if c < 0.79 {
-		return SeverityHigh
-	}
-	return SeverityCritical
+func (c Confidence) Float64() float64 {
+	return float64(c)
 }
 
 //
