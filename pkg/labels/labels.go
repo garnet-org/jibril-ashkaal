@@ -14,68 +14,79 @@ type Metadata struct {
 	Kind          kind.Kind
 	Version       float64
 	Description   string
-	Documentation string
 	Breed         Breed
 	Mechanism     Mechanism
 	Tactic        Tactic
 	Technique     Technique
 	SubTechnique  SubTechnique
+	Documentation string
+}
+
+//
+// Severity Level (none, low, medium, high, critical).
+// Tied to Severity.
+//
+
+type SeverityLevel string
+
+const (
+	SeverityNone     SeverityLevel = "none"
+	SeverityLow      SeverityLevel = "low"
+	SeverityMedium   SeverityLevel = "medium"
+	SeverityHigh     SeverityLevel = "high"
+	SeverityCritical SeverityLevel = "critical"
+)
+
+func (s SeverityLevel) String() string {
+	return string(s)
+}
+
+func (s SeverityLevel) Average() int {
+	switch s {
+	case SeverityNone:
+		return 0
+	case SeverityLow:
+		return 15
+	case SeverityMedium:
+		return 45
+	case SeverityHigh:
+		return 75
+	case SeverityCritical:
+		return 90
+	default:
+		return 0
+	}
+}
+
+func (s SeverityLevel) Severity() Severity {
+	return Severity(s.Average())
 }
 
 //
 // Severity (a number from 0 to 100).
+// Tied to SeverityLevel.
 //
 
-type SeverityLevel int
+type Severity int
 
-const (
-	SeverityNone     SeverityLevel = iota
-	SeverityLow      SeverityLevel = 29
-	SeverityMedium   SeverityLevel = 59
-	SeverityHigh     SeverityLevel = 79
-	SeverityCritical SeverityLevel = 100
-)
-
-func (s SeverityLevel) String() string {
-	if s <= SeverityNone {
-		return "none"
-	}
-	if s <= SeverityLow {
-		return "low"
-	}
-	if s <= SeverityMedium {
-		return "medium"
-	}
-	if s <= SeverityHigh {
-		return "high"
-	}
-	return "critical"
-}
-
-func (s SeverityLevel) Level() SeverityLevel {
-	if s <= SeverityNone {
+func (p Severity) Level() SeverityLevel {
+	if p <= 0 {
 		return SeverityNone
 	}
-	if s <= SeverityLow {
+	if p <= 29 {
 		return SeverityLow
 	}
-	if s <= SeverityMedium {
+	if p <= 59 {
 		return SeverityMedium
 	}
-	if s <= SeverityHigh {
+	if p <= 79 {
 		return SeverityHigh
 	}
 	return SeverityCritical
 }
 
-type Severity int
-
-func (p Severity) Level() SeverityLevel {
-	return SeverityLevel(p).Level()
-}
-
 func (p Severity) String() string {
-	return SeverityLevel(p).String()
+	return p.Level().String()
 }
 
 func (p Severity) Float64() float64 {

@@ -6,9 +6,10 @@ type Base struct {
 	UUID       string      `json:"uuid"`                 // The unique ID of the detection.
 	Timestamp  string      `json:"timestamp"`            // The timestamp of the detection.
 	Note       string      `json:"note,omitempty"`       // A note about the detection.
-	Metadata   *Metadata   `json:"metadata"`             // The detection metadata (Previous Head).
+	Metadata   *Metadata   `json:"metadata"`             // The detection metadata.
 	Attenuator *Attenuator `json:"attenuator,omitempty"` // The attenuator of the detection.
-	Background *Background `json:"background,omitempty"` // The detection context (Previous Body).
+	Score      *Score      `json:"score,omitempty"`      // Detection Security Risk Score.
+	Background *Background `json:"background,omitempty"` // The detection context.
 	Habitat    *Habitat    `json:"habitat,omitempty"`    // The detection habitat.
 	Scenario   []Scenario  `json:"scenario,omitempty"`   // GitHub, Kubernetes, Host, etc.
 }
@@ -54,31 +55,34 @@ type Metadata struct {
 	Format        string `json:"format"`                  // Detection event format.
 	Version       string `json:"version"`                 // Detection event format version.
 	Description   string `json:"description,omitempty"`   // Detection event description.
-	Documentation string `json:"documentation,omitempty"` // Detection event documentation.
 	Tactic        string `json:"tactic,omitempty"`        // Detection event MITRE tactic.
 	Technique     string `json:"technique,omitempty"`     // Detection event MITRE technique.
 	SubTechnique  string `json:"subtechnique,omitempty"`  // Detection event MITRE subtechnique.
-	Score         Score  `json:"score,omitempty"`         // Detection Security Risk Score.
+	Importance    string `json:"importance,omitempty"`    // Detection event importance.
+	Documentation string `json:"documentation,omitempty"` // Detection event documentation.
 }
 
 // Security Risk Score.
 
 type Score struct {
 	Source        string  `json:"source,omitempty"` // Source and reason of the score.
-	Severity      int     `json:"severity"`         // Severity number of the detection.
-	SeverityLevel string  `json:"severity_level"`   // Severity level of the detection.
-	Confidence    float64 `json:"confidence"`       // Confidence percentage of the detection.
-	RiskScore     float64 `json:"risk_score"`       // Calculated and rounded up risk score of the detection.
+	Severity      int     `json:"severity"`         // Severity number of the detection (0-100).
+	SeverityLevel string  `json:"severity_level"`   // Severity level of the detection (low, medium, high, critical).
+	Confidence    float64 `json:"confidence"`       // Confidence percentage of the detection (0.0-1.0).
+	RiskScore     float64 `json:"risk_score"`       // Calculated and rounded up risk score of the detection (0.0-100.0).
 }
 
 // Attenuator.
 
 type Attenuator struct {
-	IsFalsePositive bool   `json:"is_false_positive"`   // Whether the detection is a false positive.
-	NewImportance   string `json:"new_importance"`      // The new detection importance after attenuation.
-	Interpretation  string `json:"interpretation"`      // The interpretation of the attenuation.
-	Reasoning       string `json:"reasoning,omitempty"` // The reasoning behind the attenuation.
-	AttenuatedBy    string `json:"attenuated_by"`       // The model that attenuated the detection.
+	AttenuatedBy     string  `json:"attenuated_by"`      // The model that attenuated the detection.
+	Interpretation   string  `json:"interpretation"`     // The interpretation of the attenuation.
+	Thinking         string  `json:"thinking,omitempty"` // The thinking of the attenuation.
+	IsFalsePositive  bool    `json:"is_false_positive"`  // Whether the detection is a false positive.
+	NewSeverity      int     `json:"new_severity"`       // The new detection severity after attenuation (0-100).
+	NewSeverityLevel string  `json:"new_severity_level"` // The new detection severity level after attenuation (low, medium, high, critical).
+	NewConfidence    float64 `json:"new_confidence"`     // The new detection confidence after attenuation (0.0-1.0).
+	NewRiskScore     float64 `json:"new_risk_score"`     // The new detection risk score after attenuation (0.0-100.0).
 }
 
 // Context.
