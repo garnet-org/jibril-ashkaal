@@ -6,7 +6,7 @@ import "github.com/garnet-org/jibril-ashkaal/pkg/kind"
 
 type OnGoing interface {
 	Kind() kind.Kind
-	Base() *Base
+	Base() Base
 	Item() any
 	SetPrivate(string, any)
 	GetPrivate(string) any

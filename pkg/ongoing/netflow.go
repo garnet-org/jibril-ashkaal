@@ -8,12 +8,12 @@ import (
 )
 
 type OnGoingNetworkFlow struct {
-	NetworkFlow *NetworkFlow
+	NetworkFlow NetworkFlow
 	private     map[string]any
 	mutex       sync.RWMutex
 }
 
-func NewOnGoingNetworkFlow(given *NetworkFlow) *OnGoingNetworkFlow {
+func NewOnGoingNetworkFlow(given NetworkFlow) *OnGoingNetworkFlow {
 	return &OnGoingNetworkFlow{
 		NetworkFlow: given,
 		private:     make(map[string]any),
@@ -23,9 +23,16 @@ func NewOnGoingNetworkFlow(given *NetworkFlow) *OnGoingNetworkFlow {
 func (g *OnGoingNetworkFlow) Clone() OnGoing {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
+
+	// Clone the private map.
+	private := make(map[string]any)
+	for k, v := range g.private {
+		private[k] = v
+	}
+
 	return &OnGoingNetworkFlow{
 		NetworkFlow: g.NetworkFlow,
-		private:     g.private,
+		private:     private,
 	}
 }
 
@@ -35,7 +42,7 @@ func (g *OnGoingNetworkFlow) Kind() kind.Kind {
 	return kind.KindFlows
 }
 
-func (g *OnGoingNetworkFlow) Base() *Base {
+func (g *OnGoingNetworkFlow) Base() Base {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
 	return g.NetworkFlow.Base
@@ -72,6 +79,6 @@ func (g *OnGoingNetworkFlow) Serialize() []byte {
 func (g *OnGoingNetworkFlow) Destroy() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.NetworkFlow = &NetworkFlow{}
+	g.NetworkFlow = NetworkFlow{}
 	g.private = nil
 }

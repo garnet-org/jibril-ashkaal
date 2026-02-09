@@ -9,11 +9,11 @@ type OnGoingEmpty struct{}
 
 func NewOnGoingEmpty() *OnGoingEmpty { return &OnGoingEmpty{} }
 
-func (o *OnGoingEmpty) Clone() OnGoing { return nil }
+func (*OnGoingEmpty) Clone() OnGoing { return &OnGoingEmpty{} }
 
 func (*OnGoingEmpty) Kind() kind.Kind { return kind.KindEmpty }
 
-func (*OnGoingEmpty) Base() *Base { return &Base{} }
+func (*OnGoingEmpty) Base() Base { return Base{} }
 
 func (*OnGoingEmpty) Item() any { return nil }
 

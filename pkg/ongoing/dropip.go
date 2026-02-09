@@ -8,12 +8,12 @@ import (
 )
 
 type OnGoingDropIP struct {
-	DropIP  *DropIP
+	DropIP  DropIP
 	private map[string]any
 	mutex   sync.RWMutex
 }
 
-func NewOnGoingDropIP(given *DropIP) *OnGoingDropIP {
+func NewOnGoingDropIP(given DropIP) *OnGoingDropIP {
 	return &OnGoingDropIP{
 		DropIP:  given,
 		private: make(map[string]any),
@@ -23,9 +23,16 @@ func NewOnGoingDropIP(given *DropIP) *OnGoingDropIP {
 func (g *OnGoingDropIP) Clone() OnGoing {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
+
+	// Clone the private map.
+	private := make(map[string]any)
+	for k, v := range g.private {
+		private[k] = v
+	}
+
 	return &OnGoingDropIP{
 		DropIP:  g.DropIP.Clone(),
-		private: g.private,
+		private: private,
 	}
 }
 
@@ -35,7 +42,7 @@ func (g *OnGoingDropIP) Kind() kind.Kind {
 	return kind.KindDetections
 }
 
-func (g *OnGoingDropIP) Base() *Base {
+func (g *OnGoingDropIP) Base() Base {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
 	return g.DropIP.Base
@@ -72,6 +79,6 @@ func (g *OnGoingDropIP) Serialize() []byte {
 func (g *OnGoingDropIP) Destroy() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.DropIP = &DropIP{}
+	g.DropIP = DropIP{}
 	g.private = nil
 }

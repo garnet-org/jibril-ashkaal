@@ -8,12 +8,12 @@ import (
 )
 
 type OnGoingFileAccess struct {
-	FileAccess *FileAccess
+	FileAccess FileAccess
 	private    map[string]any
 	mutex      sync.RWMutex
 }
 
-func NewOnGoingFileAccess(given *FileAccess) *OnGoingFileAccess {
+func NewOnGoingFileAccess(given FileAccess) *OnGoingFileAccess {
 	return &OnGoingFileAccess{
 		FileAccess: given,
 		private:    make(map[string]any),
@@ -23,9 +23,16 @@ func NewOnGoingFileAccess(given *FileAccess) *OnGoingFileAccess {
 func (g *OnGoingFileAccess) Clone() OnGoing {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
+
+	// Clone the private map.
+	private := make(map[string]any)
+	for k, v := range g.private {
+		private[k] = v
+	}
+
 	return &OnGoingFileAccess{
 		FileAccess: g.FileAccess.Clone(),
-		private:    g.private,
+		private:    private,
 	}
 }
 
@@ -35,7 +42,7 @@ func (g *OnGoingFileAccess) Kind() kind.Kind {
 	return kind.KindDetections
 }
 
-func (g *OnGoingFileAccess) Base() *Base {
+func (g *OnGoingFileAccess) Base() Base {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
 	return g.FileAccess.Base
@@ -72,6 +79,6 @@ func (g *OnGoingFileAccess) Serialize() []byte {
 func (g *OnGoingFileAccess) Destroy() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.FileAccess = &FileAccess{}
+	g.FileAccess = FileAccess{}
 	g.private = nil
 }

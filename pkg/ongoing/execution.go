@@ -8,12 +8,12 @@ import (
 )
 
 type OnGoingExecution struct {
-	Execution *Execution
+	Execution Execution
 	private   map[string]any
 	mutex     sync.RWMutex
 }
 
-func NewOnGoingExecution(given *Execution) *OnGoingExecution {
+func NewOnGoingExecution(given Execution) *OnGoingExecution {
 	return &OnGoingExecution{
 		Execution: given,
 		private:   make(map[string]any),
@@ -23,9 +23,16 @@ func NewOnGoingExecution(given *Execution) *OnGoingExecution {
 func (g *OnGoingExecution) Clone() OnGoing {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
+
+	// Clone the private map.
+	private := make(map[string]any)
+	for k, v := range g.private {
+		private[k] = v
+	}
+
 	return &OnGoingExecution{
 		Execution: g.Execution.Clone(),
-		private:   g.private,
+		private:   private,
 	}
 }
 
@@ -35,7 +42,7 @@ func (g *OnGoingExecution) Kind() kind.Kind {
 	return kind.KindDetections
 }
 
-func (g *OnGoingExecution) Base() *Base {
+func (g *OnGoingExecution) Base() Base {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
 	return g.Execution.Base
@@ -72,6 +79,6 @@ func (g *OnGoingExecution) Serialize() []byte {
 func (g *OnGoingExecution) Destroy() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.Execution = &Execution{}
+	g.Execution = Execution{}
 	g.private = nil
 }

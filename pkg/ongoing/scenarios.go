@@ -1,6 +1,7 @@
 package ongoing
 
 import (
+	"encoding/json"
 	"time"
 )
 
@@ -43,6 +44,22 @@ type ScenarioGitHub struct {
 
 func (s ScenarioGitHub) Type() string { return "github" }
 
+func (s ScenarioGitHub) Clone() ScenarioGitHub {
+	return s
+}
+
+func (s ScenarioGitHub) IsZero() bool {
+	return s.ID == "" && s.Action == "" && s.Actor == "" && s.Repository == ""
+}
+
+func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias ScenarioGitHub
+	return json.Marshal(Alias(s))
+}
+
 // Scenario HostOS.
 
 type ScenarioHostOS struct {
@@ -55,6 +72,22 @@ type ScenarioHostOS struct {
 
 func (s ScenarioHostOS) Type() string { return "host" }
 
+func (s ScenarioHostOS) Clone() ScenarioHostOS {
+	return s
+}
+
+func (s ScenarioHostOS) IsZero() bool {
+	return s.Hostname == "" && s.IP == "" && s.MAC == "" && s.OS == "" && s.Arch == ""
+}
+
+func (s ScenarioHostOS) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias ScenarioHostOS
+	return json.Marshal(Alias(s))
+}
+
 // Scenario K8S.
 
 type ScenarioK8S struct {
@@ -65,3 +98,19 @@ type ScenarioK8S struct {
 }
 
 func (s ScenarioK8S) Type() string { return "kubernetes" }
+
+func (s ScenarioK8S) Clone() ScenarioK8S {
+	return s
+}
+
+func (s ScenarioK8S) IsZero() bool {
+	return s.Cluster == "" && s.Namespace == "" && s.Pod == "" && s.Node == ""
+}
+
+func (s ScenarioK8S) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias ScenarioK8S
+	return json.Marshal(Alias(s))
+}

@@ -8,12 +8,12 @@ import (
 )
 
 type OnGoingNetworkPeer struct {
-	NetworkPeer *NetworkPeer
+	NetworkPeer NetworkPeer
 	private     map[string]any
 	mutex       sync.RWMutex
 }
 
-func NewOnGoingNetworkPeer(given *NetworkPeer) *OnGoingNetworkPeer {
+func NewOnGoingNetworkPeer(given NetworkPeer) *OnGoingNetworkPeer {
 	return &OnGoingNetworkPeer{
 		NetworkPeer: given,
 		private:     make(map[string]any),
@@ -23,9 +23,16 @@ func NewOnGoingNetworkPeer(given *NetworkPeer) *OnGoingNetworkPeer {
 func (g *OnGoingNetworkPeer) Clone() OnGoing {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
+
+	// Clone the private map.
+	private := make(map[string]any)
+	for k, v := range g.private {
+		private[k] = v
+	}
+
 	return &OnGoingNetworkPeer{
 		NetworkPeer: g.NetworkPeer.Clone(),
-		private:     g.private,
+		private:     private,
 	}
 }
 
@@ -35,7 +42,7 @@ func (g *OnGoingNetworkPeer) Kind() kind.Kind {
 	return kind.KindDetections
 }
 
-func (g *OnGoingNetworkPeer) Base() *Base {
+func (g *OnGoingNetworkPeer) Base() Base {
 	g.mutex.RLock()
 	defer g.mutex.RUnlock()
 	return g.NetworkPeer.Base
@@ -72,6 +79,6 @@ func (g *OnGoingNetworkPeer) Serialize() []byte {
 func (g *OnGoingNetworkPeer) Destroy() {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.NetworkPeer = &NetworkPeer{}
+	g.NetworkPeer = NetworkPeer{}
 	g.private = nil
 }
