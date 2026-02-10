@@ -30,6 +30,45 @@ func (b Base) Clone() Base {
 	}
 }
 
+func (b Base) IsZero() bool {
+	return b.UUID == "" && b.Timestamp == "" && b.Note == "" &&
+		b.Metadata.IsZero() && b.Attenuator.IsZero() && b.Score.IsZero() &&
+		b.Background.IsZero() && b.Scenario.IsZero()
+}
+
+func (b Base) MarshalJSON() ([]byte, error) {
+	if b.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	result["uuid"] = b.UUID
+	result["timestamp"] = b.Timestamp
+
+	if b.Note != "" {
+		result["note"] = b.Note
+	}
+	if !b.Metadata.IsZero() {
+		result["metadata"] = b.Metadata
+	}
+	if !b.Attenuator.IsZero() {
+		result["attenuator"] = b.Attenuator
+	}
+	if !b.Score.IsZero() {
+		result["score"] = b.Score
+	}
+	if !b.Background.IsZero() {
+		result["background"] = b.Background
+	}
+	if !b.Scenario.IsZero() {
+		result["scenario"] = b.Scenario
+	}
+
+	return json.Marshal(result)
+}
+
 // Scenarios is a slice of Scenario.
 
 type Scenarios []Scenario
@@ -81,8 +120,35 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 	if m.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Metadata
-	return json.Marshal(Alias(m))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	result["kind"] = m.Kind
+	result["name"] = m.Name
+	result["format"] = m.Format
+	result["version"] = m.Version
+
+	if m.Description != "" {
+		result["description"] = m.Description
+	}
+	if m.Tactic != "" {
+		result["tactic"] = m.Tactic
+	}
+	if m.Technique != "" {
+		result["technique"] = m.Technique
+	}
+	if m.SubTechnique != "" {
+		result["subtechnique"] = m.SubTechnique
+	}
+	if m.Importance != "" {
+		result["importance"] = m.Importance
+	}
+	if m.Documentation != "" {
+		result["documentation"] = m.Documentation
+	}
+
+	return json.Marshal(result)
 }
 
 // Security Risk Score.
@@ -108,8 +174,27 @@ func (s Score) MarshalJSON() ([]byte, error) {
 	if s.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Score
-	return json.Marshal(Alias(s))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if s.Source != "" {
+		result["source"] = s.Source
+	}
+	if s.Severity != 0 {
+		result["severity"] = s.Severity
+	}
+	if s.SeverityLevel != "" {
+		result["severity_level"] = s.SeverityLevel
+	}
+	if s.Confidence != 0 {
+		result["confidence"] = s.Confidence
+	}
+	if s.RiskScore != 0 {
+		result["risk_score"] = s.RiskScore
+	}
+
+	return json.Marshal(result)
 }
 
 // Attenuator.
@@ -139,8 +224,23 @@ func (a Attenuator) MarshalJSON() ([]byte, error) {
 	if a.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Attenuator
-	return json.Marshal(Alias(a))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	result["attenuated_by"] = a.AttenuatedBy
+	result["interpretation"] = a.Interpretation
+	result["is_false_positive"] = a.IsFalsePositive
+	result["new_severity"] = a.NewSeverity
+	result["new_severity_level"] = a.NewSeverityLevel
+	result["new_confidence"] = a.NewConfidence
+	result["new_risk_score"] = a.NewRiskScore
+
+	if a.Thinking != "" {
+		result["thinking"] = a.Thinking
+	}
+
+	return json.Marshal(result)
 }
 
 // Context.
@@ -171,14 +271,30 @@ func (b Background) MarshalJSON() ([]byte, error) {
 	if b.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Background
-	return json.Marshal(Alias(b))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if !b.Files.IsZero() {
+		result["files"] = b.Files
+	}
+	if !b.Flows.IsZero() {
+		result["flows"] = b.Flows
+	}
+	if !b.Containers.IsZero() {
+		result["containers"] = b.Containers
+	}
+	if len(b.Ancestry) > 0 {
+		result["ancestry"] = b.Ancestry
+	}
+
+	return json.Marshal(result)
 }
 
 // File Access Detection Event.
 
 type FileAccess struct {
-	Base
+	Base Base `json:"base"`
 	File File `json:"file"`
 }
 
@@ -187,6 +303,11 @@ func (f FileAccess) Clone() FileAccess {
 		Base: f.Base.Clone(),
 		File: f.File.Clone(),
 	}
+}
+
+func (f FileAccess) MarshalJSON() ([]byte, error) {
+	type Alias FileAccess
+	return json.Marshal(Alias(f))
 }
 
 // Execution Detection Event.
@@ -203,6 +324,15 @@ func (e Execution) Clone() Execution {
 	}
 }
 
+func (e Execution) IsZero() bool {
+	return e.Base.IsZero() && e.Process.IsZero()
+}
+
+func (e Execution) MarshalJSON() ([]byte, error) {
+	type Alias Execution
+	return json.Marshal(Alias(e))
+}
+
 // Network Peers Detection Event.
 
 type NetworkPeer struct {
@@ -217,6 +347,15 @@ func (n NetworkPeer) Clone() NetworkPeer {
 	}
 }
 
+func (n NetworkPeer) IsZero() bool {
+	return n.Base.IsZero() && n.Flow.IsZero()
+}
+
+func (n NetworkPeer) MarshalJSON() ([]byte, error) {
+	type Alias NetworkPeer
+	return json.Marshal(Alias(n))
+}
+
 // Network Flow Event.
 
 type NetworkFlow struct {
@@ -229,6 +368,15 @@ func (n NetworkFlow) Clone() NetworkFlow {
 		Base: n.Base.Clone(),
 		Flow: n.Flow.Clone(),
 	}
+}
+
+func (n NetworkFlow) IsZero() bool {
+	return n.Base.IsZero() && n.Flow.IsZero()
+}
+
+func (n NetworkFlow) MarshalJSON() ([]byte, error) {
+	type Alias NetworkFlow
+	return json.Marshal(Alias(n))
 }
 
 // Drop IP Detection Event.
@@ -249,6 +397,15 @@ func (d DropIP) Clone() DropIP {
 		Names: names,
 		Flow:  d.Flow.Clone(),
 	}
+}
+
+func (d DropIP) IsZero() bool {
+	return d.Base.IsZero() && d.IP == "" && len(d.Names) == 0 && d.Flow.IsZero()
+}
+
+func (d DropIP) MarshalJSON() ([]byte, error) {
+	type Alias DropIP
+	return json.Marshal(Alias(d))
 }
 
 // Process.
@@ -278,9 +435,10 @@ func (p Process) Clone() Process {
 }
 
 func (p Process) IsZero() bool {
-	return p.Start == "" && p.Exit == "" && p.Code == 0 && p.UID == 0 && p.Pid == 0 && p.Ppid == 0 &&
-		p.Comm == "" && p.Cmd == "" && p.Exe == "" && p.Args == "" && p.Envs == "" && p.Loader == "" &&
-		p.PrevExe == "" && p.PrevArgs == "" && p.PrevEnvs == "" && p.PrevLoader == "" && p.Namespaces.IsZero()
+	return p.Start == "" && p.Exit == "" && p.Code == 0 && p.UID == 0 && p.Pid == 0 &&
+		p.Ppid == 0 && p.Comm == "" && p.Cmd == "" && p.Exe == "" && p.Args == "" &&
+		p.Envs == "" && p.Loader == "" && p.PrevExe == "" && p.PrevArgs == "" &&
+		p.PrevEnvs == "" && p.PrevLoader == "" && p.Namespaces.IsZero()
 }
 
 func (p Process) MarshalJSON() ([]byte, error) {
@@ -354,8 +512,39 @@ func (f File) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias File
-	return json.Marshal(Alias(f))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if f.Path != "" {
+		result["path"] = f.Path
+	}
+	if f.Dir != "" {
+		result["dir"] = f.Dir
+	}
+	if f.Base != "" {
+		result["basename"] = f.Base
+	}
+	if f.Type != "" {
+		result["type"] = f.Type
+	}
+	if !f.Owner.IsZero() {
+		result["owner"] = f.Owner
+	}
+	if !f.Actions.IsZero() {
+		result["actions"] = f.Actions
+	}
+	if !f.Permissions.IsZero() {
+		result["permissions"] = f.Permissions
+	}
+	if !f.SpecialBits.IsZero() {
+		result["special"] = f.SpecialBits
+	}
+	if !f.Metadata.IsZero() {
+		result["metadata"] = f.Metadata
+	}
+
+	return json.Marshal(result)
 }
 
 type FileOwner struct {
@@ -515,8 +704,7 @@ func (f FileAggregate) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias FileAggregate
-	return json.Marshal(Alias(f))
+	return json.Marshal(f.Root)
 }
 
 // FSDir.
@@ -553,8 +741,24 @@ func (f FSDir) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias FSDir
-	return json.Marshal(Alias(f))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if f.Path != "" {
+		result["path"] = f.Path
+	}
+	if f.Base != "" {
+		result["base"] = f.Base
+	}
+	if len(f.Dirs) > 0 {
+		result["dirs"] = f.Dirs
+	}
+	if len(f.Files) > 0 {
+		result["files"] = f.Files
+	}
+
+	return json.Marshal(result)
 }
 
 type FSFile struct {
@@ -588,8 +792,30 @@ func (f FSFile) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias FSFile
-	return json.Marshal(Alias(f))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if f.Path != "" {
+		result["path"] = f.Path
+	}
+	if f.Base != "" {
+		result["base"] = f.Base
+	}
+	if len(f.Actions) > 0 {
+		result["actions"] = f.Actions
+	}
+	if f.Mode != "" {
+		result["mode"] = f.Mode
+	}
+	if !f.Owner.IsZero() {
+		result["owner"] = f.Owner
+	}
+	if !f.Metadata.IsZero() {
+		result["metadata"] = f.Metadata
+	}
+
+	return json.Marshal(result)
 }
 
 // Flow.
@@ -628,8 +854,36 @@ func (f Flow) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Flow
-	return json.Marshal(Alias(f))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if f.IPVersion != 0 {
+		result["ip_version"] = f.IPVersion
+	}
+	if f.Proto != "" {
+		result["proto"] = f.Proto
+	}
+	if !f.ICMP.IsZero() {
+		result["icmp"] = f.ICMP
+	}
+	if !f.Local.IsZero() {
+		result["local"] = f.Local
+	}
+	if !f.Remote.IsZero() {
+		result["remote"] = f.Remote
+	}
+	if f.ServicePort != 0 {
+		result["service_port"] = f.ServicePort
+	}
+	if !f.Flags.IsZero() {
+		result["flags"] = f.Flags
+	}
+	if !f.Phase.IsZero() {
+		result["phase"] = f.Phase
+	}
+
+	return json.Marshal(result)
 }
 
 type ICMP struct {
@@ -645,8 +899,18 @@ func (i ICMP) MarshalJSON() ([]byte, error) {
 	if i.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias ICMP
-	return json.Marshal(Alias(i))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if i.Type != "" {
+		result["type"] = i.Type
+	}
+	if i.Code != "" {
+		result["code"] = i.Code
+	}
+
+	return json.Marshal(result)
 }
 
 type Node struct {
@@ -675,8 +939,24 @@ func (n Node) MarshalJSON() ([]byte, error) {
 	if n.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Node
-	return json.Marshal(Alias(n))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if n.Address != "" {
+		result["address"] = n.Address
+	}
+	if n.Name != "" {
+		result["name"] = n.Name
+	}
+	if len(n.Names) > 0 {
+		result["names"] = n.Names
+	}
+	if n.Port != 0 {
+		result["port"] = n.Port
+	}
+
+	return json.Marshal(result)
 }
 
 type Flags struct {
@@ -700,8 +980,39 @@ func (f Flags) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Flags
-	return json.Marshal(Alias(f))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if f.Ingress {
+		result["ingress"] = f.Ingress
+	}
+	if f.Egress {
+		result["egress"] = f.Egress
+	}
+	if f.Incoming {
+		result["incoming"] = f.Incoming
+	}
+	if f.Outgoing {
+		result["outgoing"] = f.Outgoing
+	}
+	if f.Started {
+		result["started"] = f.Started
+	}
+	if f.Ongoing {
+		result["ongoing"] = f.Ongoing
+	}
+	if f.Ended {
+		result["ended"] = f.Ended
+	}
+	if f.Terminator {
+		result["terminator"] = f.Terminator
+	}
+	if f.Terminated {
+		result["terminated"] = f.Terminated
+	}
+
+	return json.Marshal(result)
 }
 
 type Phase struct {
@@ -719,8 +1030,24 @@ func (p Phase) MarshalJSON() ([]byte, error) {
 	if p.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Phase
-	return json.Marshal(Alias(p))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if p.Direction != "" {
+		result["direction"] = p.Direction
+	}
+	if p.InitatedBy != "" {
+		result["initiated_by"] = p.InitatedBy
+	}
+	if p.Status != "" {
+		result["status"] = p.Status
+	}
+	if p.EndedBy != "" {
+		result["ended_by"] = p.EndedBy
+	}
+
+	return json.Marshal(result)
 }
 
 // Flow Aggregate.
@@ -754,8 +1081,18 @@ func (f FlowAggregate) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias FlowAggregate
-	return json.Marshal(Alias(f))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if f.IPVersion != 0 {
+		result["ip_version"] = f.IPVersion
+	}
+	if len(f.Protocols) > 0 {
+		result["protocols"] = f.Protocols
+	}
+
+	return json.Marshal(result)
 }
 
 type ProtocolAggregate struct {
@@ -778,6 +1115,31 @@ func (p ProtocolAggregate) Clone() ProtocolAggregate {
 	}
 }
 
+func (p ProtocolAggregate) IsZero() bool {
+	return p.Proto == "" && len(p.Pairs) == 0 && len(p.ICMPs) == 0
+}
+
+func (p ProtocolAggregate) MarshalJSON() ([]byte, error) {
+	if p.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if p.Proto != "" {
+		result["proto"] = p.Proto
+	}
+	if len(p.Pairs) > 0 {
+		result["pairs"] = p.Pairs
+	}
+	if len(p.ICMPs) > 0 {
+		result["icmps"] = p.ICMPs
+	}
+
+	return json.Marshal(result)
+}
+
 type ProtocolLocalRemoteAgg struct {
 	Nodes      LocalRemotePair `json:"nodes"`                 // Local and remote nodes.
 	PortMatrix []PortCommAgg   `json:"port_matrix,omitempty"` // All port communications between these nodes.
@@ -790,6 +1152,28 @@ func (p ProtocolLocalRemoteAgg) Clone() ProtocolLocalRemoteAgg {
 		Nodes:      p.Nodes.Clone(),
 		PortMatrix: portMatrix,
 	}
+}
+
+func (p ProtocolLocalRemoteAgg) IsZero() bool {
+	return p.Nodes.IsZero() && len(p.PortMatrix) == 0
+}
+
+func (p ProtocolLocalRemoteAgg) MarshalJSON() ([]byte, error) {
+	if p.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if !p.Nodes.IsZero() {
+		result["nodes"] = p.Nodes
+	}
+	if len(p.PortMatrix) > 0 {
+		result["port_matrix"] = p.PortMatrix
+	}
+
+	return json.Marshal(result)
 }
 
 type ProtocolNode struct {
@@ -808,6 +1192,31 @@ func (p ProtocolNode) Clone() ProtocolNode {
 	}
 }
 
+func (p ProtocolNode) IsZero() bool {
+	return p.Address == "" && p.Name == "" && len(p.Names) == 0
+}
+
+func (p ProtocolNode) MarshalJSON() ([]byte, error) {
+	if p.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if p.Address != "" {
+		result["address"] = p.Address
+	}
+	if p.Name != "" {
+		result["name"] = p.Name
+	}
+	if len(p.Names) > 0 {
+		result["names"] = p.Names
+	}
+
+	return json.Marshal(result)
+}
+
 type LocalRemotePair struct {
 	Local  ProtocolNode `json:"local"`  // Local node.
 	Remote ProtocolNode `json:"remote"` // Remote node.
@@ -820,10 +1229,57 @@ func (l LocalRemotePair) Clone() LocalRemotePair {
 	}
 }
 
+func (l LocalRemotePair) IsZero() bool {
+	return l.Local.IsZero() && l.Remote.IsZero()
+}
+
+func (l LocalRemotePair) MarshalJSON() ([]byte, error) {
+	if l.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if !l.Local.IsZero() {
+		result["local"] = l.Local
+	}
+	if !l.Remote.IsZero() {
+		result["remote"] = l.Remote
+	}
+
+	return json.Marshal(result)
+}
+
 type PortCommAgg struct {
 	SrcPort int   `json:"src_port,omitempty"` // Source port.
 	DstPort int   `json:"dst_port,omitempty"` // Destination port.
 	Phase   Phase `json:"phase,omitempty"`    // Flow phase.
+}
+
+func (p PortCommAgg) IsZero() bool {
+	return p.SrcPort == 0 && p.DstPort == 0 && p.Phase.IsZero()
+}
+
+func (p PortCommAgg) MarshalJSON() ([]byte, error) {
+	if p.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if p.SrcPort != 0 {
+		result["src_port"] = p.SrcPort
+	}
+	if p.DstPort != 0 {
+		result["dst_port"] = p.DstPort
+	}
+	if !p.Phase.IsZero() {
+		result["phase"] = p.Phase
+	}
+
+	return json.Marshal(result)
 }
 
 // Containers and Namespaces
@@ -877,8 +1333,33 @@ func (c ContainerAggregate) MarshalJSON() ([]byte, error) {
 	if c.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias ContainerAggregate
-	return json.Marshal(Alias(c))
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if len(c.MntNamespaceIDs) > 0 {
+		result["mnt_namespace_ids"] = c.MntNamespaceIDs
+	}
+	if len(c.PidNamespaceIDs) > 0 {
+		result["pid_namespace_ids"] = c.PidNamespaceIDs
+	}
+	if len(c.UtsNamespaceIDs) > 0 {
+		result["uts_namespace_ids"] = c.UtsNamespaceIDs
+	}
+	if len(c.IpcNamespaceIDs) > 0 {
+		result["ipc_namespace_ids"] = c.IpcNamespaceIDs
+	}
+	if len(c.NetNamespaceIDs) > 0 {
+		result["net_namespace_ids"] = c.NetNamespaceIDs
+	}
+	if len(c.CgroupNamespaceIDs) > 0 {
+		result["cgroup_namespace_ids"] = c.CgroupNamespaceIDs
+	}
+	if len(c.Containers) > 0 {
+		result["containers"] = c.Containers
+	}
+
+	return json.Marshal(result)
 }
 
 type ContainerPair struct {
@@ -894,10 +1375,57 @@ func (c ContainerPair) GetID() string {
 	return c.ID
 }
 
+func (c ContainerPair) IsZero() bool {
+	return c.Name == "" && c.ID == ""
+}
+
+func (c ContainerPair) MarshalJSON() ([]byte, error) {
+	if c.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if c.Name != "" {
+		result["name"] = c.Name
+	}
+	if c.ID != "" {
+		result["id"] = c.ID
+	}
+
+	return json.Marshal(result)
+}
+
 type Mount struct {
 	Source      string `json:"source,omitempty"`
 	Destination string `json:"destination,omitempty"`
 	Type        string `json:"type,omitempty"`
+}
+
+func (m Mount) IsZero() bool {
+	return m.Source == "" && m.Destination == "" && m.Type == ""
+}
+
+func (m Mount) MarshalJSON() ([]byte, error) {
+	if m.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	if m.Source != "" {
+		result["source"] = m.Source
+	}
+	if m.Destination != "" {
+		result["destination"] = m.Destination
+	}
+	if m.Type != "" {
+		result["type"] = m.Type
+	}
+
+	return json.Marshal(result)
 }
 
 type Container struct {
@@ -966,4 +1494,108 @@ func (c Container) Clone() Container {
 		Cmd:          cmd,
 		Namespaces:   c.Namespaces,
 	}
+}
+
+func (c Container) IsZero() bool {
+	return c.ID == "" && c.Name == "" && c.HostName == "" &&
+		c.ImageID == "" && c.Image == "" && c.Version == "" &&
+		c.Runtime == "" && c.Driver == "" && c.PID == 0 &&
+		c.ExitCode == 0 && c.Status == "" && !c.IsAttached &&
+		c.Path == "" && c.Cwd == "" && c.CreatedAt == "" &&
+		c.StartedAt == "" && c.FinishedAt == "" && len(c.Mounts) == 0 &&
+		c.NetworkMode == "" && c.CgroupnsMode == "" && c.IpcMode == "" &&
+		c.PidMode == "" && c.UsernsMode == "" && c.UTSMode == "" &&
+		len(c.Env) == 0 && len(c.Cmd) == 0 && c.Namespaces.IsZero()
+}
+
+func (c Container) MarshalJSON() ([]byte, error) {
+	if c.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Build a map with only non-zero fields.
+	result := make(map[string]any)
+
+	result["id"] = c.ID
+
+	if c.Name != "" {
+		result["name"] = c.Name
+	}
+	if c.HostName != "" {
+		result["hostname"] = c.HostName
+	}
+	if c.ImageID != "" {
+		result["image_id"] = c.ImageID
+	}
+	if c.Image != "" {
+		result["image"] = c.Image
+	}
+	if c.Version != "" {
+		result["version"] = c.Version
+	}
+	if c.Runtime != "" {
+		result["runtime"] = c.Runtime
+	}
+	if c.Driver != "" {
+		result["driver"] = c.Driver
+	}
+	if c.PID != 0 {
+		result["pid"] = c.PID
+	}
+	if c.ExitCode != 0 {
+		result["exit_code"] = c.ExitCode
+	}
+	if c.Status != "" {
+		result["status"] = c.Status
+	}
+	if c.IsAttached {
+		result["is_attached"] = c.IsAttached
+	}
+	if c.Path != "" {
+		result["path"] = c.Path
+	}
+	if c.Cwd != "" {
+		result["cwd"] = c.Cwd
+	}
+	if c.CreatedAt != "" {
+		result["created_at"] = c.CreatedAt
+	}
+	if c.StartedAt != "" {
+		result["started_at"] = c.StartedAt
+	}
+	if c.FinishedAt != "" {
+		result["finished_at"] = c.FinishedAt
+	}
+	if len(c.Mounts) > 0 {
+		result["mounts"] = c.Mounts
+	}
+	if c.NetworkMode != "" {
+		result["network_mode"] = c.NetworkMode
+	}
+	if c.CgroupnsMode != "" {
+		result["cgroupns_mode"] = c.CgroupnsMode
+	}
+	if c.IpcMode != "" {
+		result["ipc_mode"] = c.IpcMode
+	}
+	if c.PidMode != "" {
+		result["pid_mode"] = c.PidMode
+	}
+	if c.UsernsMode != "" {
+		result["userns_mode"] = c.UsernsMode
+	}
+	if c.UTSMode != "" {
+		result["uts_mode"] = c.UTSMode
+	}
+	if len(c.Env) > 0 {
+		result["env"] = c.Env
+	}
+	if len(c.Cmd) > 0 {
+		result["cmd"] = c.Cmd
+	}
+	if !c.Namespaces.IsZero() {
+		result["namespaces"] = c.Namespaces
+	}
+
+	return json.Marshal(result)
 }

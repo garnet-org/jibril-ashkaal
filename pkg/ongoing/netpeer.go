@@ -82,3 +82,27 @@ func (g *OnGoingNetworkPeer) Destroy() {
 	g.NetworkPeer = NetworkPeer{}
 	g.private = nil
 }
+
+func (g *OnGoingNetworkPeer) SetScore(score Score) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.NetworkPeer.Base.Score = score
+}
+
+func (g *OnGoingNetworkPeer) GetScore() Score {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.NetworkPeer.Base.Score
+}
+
+func (g *OnGoingNetworkPeer) SetAttenuator(attenuator Attenuator) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.NetworkPeer.Base.Attenuator = attenuator
+}
+
+func (g *OnGoingNetworkPeer) GetAttenuator() Attenuator {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.NetworkPeer.Base.Attenuator
+}

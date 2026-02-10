@@ -82,3 +82,27 @@ func (g *OnGoingExecution) Destroy() {
 	g.Execution = Execution{}
 	g.private = nil
 }
+
+func (g *OnGoingExecution) SetScore(score Score) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.Execution.Base.Score = score
+}
+
+func (g *OnGoingExecution) GetScore() Score {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.Execution.Base.Score
+}
+
+func (g *OnGoingExecution) SetAttenuator(attenuator Attenuator) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.Execution.Base.Attenuator = attenuator
+}
+
+func (g *OnGoingExecution) GetAttenuator() Attenuator {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.Execution.Base.Attenuator
+}

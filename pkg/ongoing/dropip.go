@@ -82,3 +82,27 @@ func (g *OnGoingDropIP) Destroy() {
 	g.DropIP = DropIP{}
 	g.private = nil
 }
+
+func (g *OnGoingDropIP) SetScore(score Score) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.DropIP.Base.Score = score
+}
+
+func (g *OnGoingDropIP) GetScore() Score {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.DropIP.Base.Score
+}
+
+func (g *OnGoingDropIP) SetAttenuator(attenuator Attenuator) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.DropIP.Base.Attenuator = attenuator
+}
+
+func (g *OnGoingDropIP) GetAttenuator() Attenuator {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.DropIP.Base.Attenuator
+}

@@ -13,4 +13,8 @@ type OnGoing interface {
 	Serialize() []byte
 	Clone() OnGoing
 	Destroy()
+	SetScore(score Score)
+	SetAttenuator(attenuator Attenuator)
+	GetScore() Score
+	GetAttenuator() Attenuator
 }

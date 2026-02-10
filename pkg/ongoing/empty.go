@@ -24,3 +24,11 @@ func (*OnGoingEmpty) GetPrivate(string) any { return nil }
 func (*OnGoingEmpty) Serialize() []byte { return []byte{} }
 
 func (*OnGoingEmpty) Destroy() {}
+
+func (*OnGoingEmpty) SetScore(Score) {}
+
+func (*OnGoingEmpty) GetScore() Score { return Score{} }
+
+func (*OnGoingEmpty) SetAttenuator(attenuator Attenuator) {}
+
+func (*OnGoingEmpty) GetAttenuator() Attenuator { return Attenuator{} }

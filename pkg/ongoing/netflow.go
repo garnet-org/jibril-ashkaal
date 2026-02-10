@@ -82,3 +82,27 @@ func (g *OnGoingNetworkFlow) Destroy() {
 	g.NetworkFlow = NetworkFlow{}
 	g.private = nil
 }
+
+func (g *OnGoingNetworkFlow) SetScore(score Score) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.NetworkFlow.Base.Score = score
+}
+
+func (g *OnGoingNetworkFlow) GetScore() Score {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.NetworkFlow.Base.Score
+}
+
+func (g *OnGoingNetworkFlow) SetAttenuator(attenuator Attenuator) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.NetworkFlow.Base.Attenuator = attenuator
+}
+
+func (g *OnGoingNetworkFlow) GetAttenuator() Attenuator {
+	g.mutex.RLock()
+	defer g.mutex.RUnlock()
+	return g.NetworkFlow.Base.Attenuator
+}
