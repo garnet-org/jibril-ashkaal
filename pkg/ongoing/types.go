@@ -294,7 +294,7 @@ func (b Background) MarshalJSON() ([]byte, error) {
 // File Access Detection Event.
 
 type FileAccess struct {
-	Base Base `json:"base"`
+	Base
 	File File `json:"file"`
 }
 
