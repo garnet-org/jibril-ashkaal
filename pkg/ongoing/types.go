@@ -1599,3 +1599,70 @@ func (c Container) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(result)
 }
+
+type WorkflowRun struct {
+	Actor      string `json:"actor,omitempty"`      // The username of the user that triggered the workflow run.
+	RunID      string `json:"run_id"`               // The unique ID of the workflow run.
+	Repository string `json:"repository"`           // The owner and repository name of the workflow.
+	Workflow   string `json:"workflow"`             // The name of the workflow.
+	StartTime  string `json:"start_time,omitempty"` // The start time of the workflow run.
+	EndTime    string `json:"end_time,omitempty"`   // The end time of the workflow run.
+}
+
+type EgressDomain struct {
+	Domain   string   `json:"domain"`
+	Status   string   `json:"status,omitempty"`
+	Reason   string   `json:"reason,omitempty"`
+	Process  string   `json:"process"`
+	Ancestry []string `json:"ancestry,omitempty"`
+}
+
+type Egress struct {
+	UniqueDomains  []EgressDomain `json:"unique_domains"`
+	TotalDomains   uint           `json:"total_domains"`
+	FlaggedDomains uint           `json:"flagged_domains,omitempty"`
+}
+
+type NetworkProfile struct {
+	Egress Egress `json:"egress,omitempty"`
+}
+
+type NetworkTelemetry struct {
+	UniqueDomains    uint   `json:"unique_domains"`
+	TotalConnections uint64 `json:"total_connections"`
+}
+
+type Telemetry struct {
+	NetworkTelemetry NetworkTelemetry `json:"network_telemetry,omitempty"`
+}
+
+type Evidence struct {
+	Timestamp     string   `json:"timestamp"`
+	EventName     string   `json:"event_name"`
+	Domain        string   `json:"domain"`
+	RemoteAddress string   `json:"remote_address"`
+	Process       string   `json:"process"`
+	Ancestry      []string `json:"ancestry"`
+}
+
+type Assertion struct {
+	ID        string     `json:"id"`
+	EventKind string     `json:"event_kind"` // Assertion event class name.
+	Result    string     `json:"result"`
+	Details   string     `json:"details"`
+	Evidence  []Evidence `json:"evidence"`
+}
+
+// Behavior Profile Event.
+
+type Behavior struct {
+	Run        WorkflowRun    `json:"run"`
+	Network    NetworkProfile `json:"network"`
+	Assertions []Assertion    `json:"assertions"`
+	Telemetry  Telemetry      `json:"telemetry"`
+}
+
+type Profile struct {
+	Base
+	Behavior Behavior `json:"behavior"`
+}
