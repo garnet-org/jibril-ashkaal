@@ -1599,3 +1599,69 @@ func (c Container) MarshalJSON() ([]byte, error) {
 
 	return json.Marshal(result)
 }
+
+type WorkflowRun struct {
+	Actor      string `json:"actor,omitempty"`        // The username of the user that triggered the workflow run. From GITHUB_ACTOR.
+	Commit     string `json:"commit,omitempty"`       // The commit SHA that triggered the workflow. From GITHUB_SHA.
+	RunID      string `json:"run_id"`                 // The unique ID of the workflow run. From GITHUB_RUN_ID.
+	RunRef     string `json:"run_ref,omitempty"`      // The fully-formed ref of the branch or tag that triggered the workflow run. From GITHUB_REF.
+	RunRefName string `json:"run_ref_name,omitempty"` // The short ref name of the branch or tag that triggered the workflow run. From GITHUB_REF_NAME.
+	Repository string `json:"repository"`             // The owner and repository name of the workflow. From GITHUB_REPOSITORY.
+	Workflow   string `json:"workflow"`               // The name of the workflow. From GITHUB_WORKFLOW.
+	StartTime  string `json:"start_time,omitempty"`   // The start time of the workflow run.
+	EndTime    string `json:"end_time,omitempty"`     // The end time of the workflow run.
+}
+
+type EgressDomain struct {
+	Domain   string   `json:"domain,omitempty"`   // The target domain of this egress traffic.
+	Status   string   `json:"status,omitempty"`   // The classification of this domain.
+	Reason   string   `json:"reason,omitempty"`   // The reason why this domain was flagged.
+	Process  string   `json:"process,omitempty"`  // The current process that triggered this egress.
+	Ancestry []string `json:"ancestry,omitempty"` // The process hierarchy that triggered this egress.
+}
+
+type Egress struct {
+	UniqueDomains  []EgressDomain `json:"unique_domains,omitempty"`  // Unique outbound domains.
+	TotalDomains   uint           `json:"total_domains,omitempty"`   // Total outbound domains.
+	FlaggedDomains uint           `json:"flagged_domains,omitempty"` // Total flagged domains.
+}
+
+type NetworkProfile struct {
+	Egress Egress `json:"egress,omitempty"` // Egress traffic.
+}
+
+type NetworkTelemetry struct {
+	EgressTotalDomains     uint `json:"egress_total_domains,omitempty"`     // Total outbound domains.
+	EgressTotalConnections uint `json:"egress_total_connections,omitempty"` // Total outbound connections.
+}
+
+type Telemetry struct {
+	NetworkTelemetry NetworkTelemetry `json:"network_telemetry,omitempty"` // Observed Network telemetry.
+}
+
+type Evidence struct {
+	Timestamp     string   `json:"timestamp,omitempty"`      // Timestamp of the evidence.
+	EventKind     string   `json:"event_kind,omitempty"`     // Event class name.
+	Domain        string   `json:"domain,omitempty"`         // Target domain.
+	RemoteAddress string   `json:"remote_address,omitempty"` // Remote IP Address.
+	Process       string   `json:"process,omitempty"`        // Current process.
+	Ancestry      []string `json:"ancestry,omitempty"`       // Process hierarchy.
+}
+
+type Assertion struct {
+	ID        string     `json:"id,omitempty"`         // Assertion ID or class.
+	EventKind string     `json:"event_kind,omitempty"` // Event class name.
+	Result    string     `json:"result,omitempty"`     // Assertion result.
+	Details   string     `json:"details,omitempty"`    // Assertion details.
+	Evidence  []Evidence `json:"evidence,omitempty"`   // List of evidence.
+}
+
+// Behavior Profile Event.
+
+type Profile struct {
+	Base
+	Run        WorkflowRun    `json:"run"`                 // Workflow run information.
+	Network    NetworkProfile `json:"network"`             // Network profile.
+	Assertions []Assertion    `json:"assertions"`          // Profile assertions.
+	Telemetry  Telemetry      `json:"telemetry,omitempty"` // Profile telemetry.
+}
