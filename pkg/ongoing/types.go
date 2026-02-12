@@ -1660,8 +1660,9 @@ type Assertion struct {
 
 type Profile struct {
 	Base
-	Run        WorkflowRun    `json:"run"`                 // Workflow run information.
-	Network    NetworkProfile `json:"network"`             // Network profile.
-	Assertions []Assertion    `json:"assertions"`          // Profile assertions.
-	Telemetry  Telemetry      `json:"telemetry,omitempty"` // Profile telemetry.
+	SchemaVersion string         `json:"schema_version"`      // Schema version.
+	Run           WorkflowRun    `json:"run"`                 // Workflow run information.
+	Network       NetworkProfile `json:"network"`             // Network profile.
+	Assertions    []Assertion    `json:"assertions"`          // Profile assertions.
+	Telemetry     Telemetry      `json:"telemetry,omitempty"` // Profile telemetry.
 }
