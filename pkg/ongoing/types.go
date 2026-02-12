@@ -1612,22 +1612,115 @@ type WorkflowRun struct {
 	EndTime    string `json:"end_time,omitempty"`     // The end time of the workflow run.
 }
 
-type EgressDomain struct {
-	Domain   string   `json:"domain,omitempty"`   // The target domain of this egress traffic.
-	Status   string   `json:"status,omitempty"`   // The classification of this domain.
-	Reason   string   `json:"reason,omitempty"`   // The reason why this domain was flagged.
-	Process  string   `json:"process,omitempty"`  // The current process that triggered this egress.
-	Ancestry []string `json:"ancestry,omitempty"` // The process hierarchy that triggered this egress.
+func (r WorkflowRun) Clone() WorkflowRun {
+	return r
+}
+
+func (r WorkflowRun) IsZero() bool {
+	return r.Actor == "" && r.Commit == "" &&
+		r.RunID == "" && r.RunRef == "" &&
+		r.Repository == "" && r.Workflow == ""
+}
+
+func (r WorkflowRun) MarshalJSON() ([]byte, error) {
+	if r.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias WorkflowRun
+	return json.Marshal(Alias(r))
+}
+
+type EgressPeer struct {
+	Domain      string   `json:"domain,omitempty"`       // Target domain of the remote peer.
+	PeerName    string   `json:"peer_name,omitempty"`    // The qualified domain name of the remote peer.
+	PeerAddress string   `json:"peer_address,omitempty"` // The IP address of the remote peer.
+	Status      string   `json:"status,omitempty"`       // The classification of this peer name and its domain.
+	Reason      string   `json:"reason,omitempty"`       // The reason why this domain was flagged.
+	Process     string   `json:"process,omitempty"`      // The current process that triggered this egress.
+	Ancestry    []string `json:"ancestry,omitempty"`     // The process hierarchy that triggered this egress.
+}
+
+func (ep EgressPeer) Clone() EgressPeer {
+	ancestry := make([]string, len(ep.Ancestry))
+	copy(ancestry, ep.Ancestry)
+	return EgressPeer{
+		Domain:      ep.Domain,
+		PeerName:    ep.PeerName,
+		PeerAddress: ep.PeerAddress,
+		Status:      ep.Status,
+		Reason:      ep.Reason,
+		Process:     ep.Process,
+		Ancestry:    ancestry,
+	}
+}
+
+func (ep EgressPeer) IsZero() bool {
+	return ep.Domain == "" && ep.PeerName == "" && ep.PeerAddress == ""
+}
+
+func (ep EgressPeer) MarshalJSON() ([]byte, error) {
+	if ep.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias EgressPeer
+	return json.Marshal(Alias(ep))
 }
 
 type Egress struct {
-	UniqueDomains  []EgressDomain `json:"unique_domains,omitempty"`  // Unique outbound domains.
-	TotalDomains   uint           `json:"total_domains,omitempty"`   // Total outbound domains.
-	FlaggedDomains uint           `json:"flagged_domains,omitempty"` // Total flagged domains.
+	EgressPeers    []EgressPeer `json:"egress_peers,omitempty"`    // Outbound detailed traffic.
+	UniqueDomains  []string     `json:"unique_domains,omitempty"`  // List of unique domains.
+	TotalDomains   uint         `json:"total_domains,omitempty"`   // Total outbound unique domains.
+	FlaggedDomains uint         `json:"flagged_domains,omitempty"` // Total flagged unique domains.
+}
+
+func (e Egress) Clone() Egress {
+	epeers := make([]EgressPeer, len(e.EgressPeers))
+	udomains := make([]string, len(e.UniqueDomains))
+	for i, peer := range e.EgressPeers {
+		epeers[i] = peer.Clone()
+	}
+	copy(udomains, e.UniqueDomains)
+	return Egress{
+		EgressPeers:    epeers,
+		UniqueDomains:  udomains,
+		TotalDomains:   e.TotalDomains,
+		FlaggedDomains: e.FlaggedDomains,
+	}
+}
+
+func (e Egress) IsZero() bool {
+	return e.TotalDomains == 0 && len(e.EgressPeers) == 0 &&
+		len(e.UniqueDomains) == 0
+}
+
+func (e Egress) MarshalJSON() ([]byte, error) {
+	if e.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias Egress
+	return json.Marshal(Alias(e))
 }
 
 type NetworkProfile struct {
 	Egress Egress `json:"egress,omitempty"` // Egress traffic.
+}
+
+func (np NetworkProfile) Clone() NetworkProfile {
+	return NetworkProfile{
+		Egress: np.Egress.Clone(),
+	}
+}
+
+func (np NetworkProfile) IsZero() bool {
+	return np.Egress.IsZero()
+}
+
+func (np NetworkProfile) MarshalJSON() ([]byte, error) {
+	if np.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias NetworkProfile
+	return json.Marshal(Alias(np))
 }
 
 type NetworkTelemetry struct {
@@ -1635,17 +1728,77 @@ type NetworkTelemetry struct {
 	EgressTotalConnections uint `json:"egress_total_connections,omitempty"` // Total outbound connections.
 }
 
+func (nt NetworkTelemetry) Clone() NetworkTelemetry {
+	return nt
+}
+func (nt NetworkTelemetry) IsZero() bool {
+	return nt.EgressTotalDomains == 0 && nt.EgressTotalConnections == 0
+}
+
+func (nt NetworkTelemetry) MarshalJSON() ([]byte, error) {
+	if nt.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias NetworkTelemetry
+	return json.Marshal(Alias(nt))
+}
+
 type Telemetry struct {
 	NetworkTelemetry NetworkTelemetry `json:"network_telemetry,omitempty"` // Observed Network telemetry.
 }
 
+func (t Telemetry) Clone() Telemetry {
+	return Telemetry{
+		NetworkTelemetry: t.NetworkTelemetry.Clone(),
+	}
+}
+
+func (t Telemetry) IsZero() bool {
+	return t.NetworkTelemetry.IsZero()
+}
+
+func (t Telemetry) MarshalJSON() ([]byte, error) {
+	if t.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias Telemetry
+	return json.Marshal(Alias(t))
+}
+
 type Evidence struct {
-	Timestamp     string   `json:"timestamp,omitempty"`      // Timestamp of the evidence.
-	EventKind     string   `json:"event_kind,omitempty"`     // Event class name.
-	Domain        string   `json:"domain,omitempty"`         // Target domain.
-	RemoteAddress string   `json:"remote_address,omitempty"` // Remote IP Address.
-	Process       string   `json:"process,omitempty"`        // Current process.
-	Ancestry      []string `json:"ancestry,omitempty"`       // Process hierarchy.
+	Timestamp   string   `json:"timestamp,omitempty"`    // Timestamp of the evidence.
+	EventKind   string   `json:"event_kind,omitempty"`   // Event class name.
+	Domain      string   `json:"domain,omitempty"`       // Target domain.
+	PeerName    string   `json:"peer_name,omitempty"`    // The qualified domain name of the remote peer.
+	PeerAddress string   `json:"peer_address,omitempty"` // The IP address of the remote peer.
+	Process     string   `json:"process,omitempty"`      // Current process.
+	Ancestry    []string `json:"ancestry,omitempty"`     // Process hierarchy.
+}
+
+func (e Evidence) Clone() Evidence {
+	ancestry := make([]string, len(e.Ancestry))
+	copy(ancestry, e.Ancestry)
+	return Evidence{
+		Timestamp:   e.Timestamp,
+		EventKind:   e.EventKind,
+		Domain:      e.Domain,
+		PeerName:    e.PeerName,
+		PeerAddress: e.PeerAddress,
+		Process:     e.Process,
+		Ancestry:    ancestry,
+	}
+}
+
+func (e Evidence) IsZero() bool {
+	return e.Domain == "" && e.PeerName == "" && e.PeerAddress == ""
+}
+
+func (e Evidence) MarshalJSON() ([]byte, error) {
+	if e.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias Evidence
+	return json.Marshal(Alias(e))
 }
 
 type Assertion struct {
@@ -1654,6 +1807,33 @@ type Assertion struct {
 	Result    string     `json:"result,omitempty"`     // Assertion result.
 	Details   string     `json:"details,omitempty"`    // Assertion details.
 	Evidence  []Evidence `json:"evidence,omitempty"`   // List of evidence.
+}
+
+func (a Assertion) Clone() Assertion {
+	evidence := make([]Evidence, len(a.Evidence))
+	for i, ev := range a.Evidence {
+		evidence[i] = ev.Clone()
+	}
+	return Assertion{
+		ID:        a.ID,
+		EventKind: a.EventKind,
+		Result:    a.Result,
+		Details:   a.Details,
+		Evidence:  evidence,
+	}
+}
+
+func (a Assertion) IsZero() bool {
+	return a.ID == "" && a.Result == "" &&
+		len(a.Evidence) == 0
+}
+
+func (a Assertion) MarshalJSON() ([]byte, error) {
+	if a.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias Assertion
+	return json.Marshal(Alias(a))
 }
 
 // Behavior Profile Event.
@@ -1665,4 +1845,32 @@ type Profile struct {
 	Network       NetworkProfile `json:"network"`             // Network profile.
 	Assertions    []Assertion    `json:"assertions"`          // Profile assertions.
 	Telemetry     Telemetry      `json:"telemetry,omitempty"` // Profile telemetry.
+}
+
+func (p Profile) Clone() Profile {
+	assertions := make([]Assertion, len(p.Assertions))
+	for i, a := range p.Assertions {
+		assertions[i] = a.Clone()
+	}
+	return Profile{
+		Base:          p.Base.Clone(),
+		SchemaVersion: p.SchemaVersion,
+		Run:           p.Run.Clone(),
+		Network:       p.Network.Clone(),
+		Assertions:    assertions,
+		Telemetry:     p.Telemetry.Clone(),
+	}
+}
+
+func (p Profile) IsZero() bool {
+	return p.Run.IsZero() && p.Network.IsZero() &&
+		len(p.Assertions) == 0 && p.Telemetry.IsZero()
+}
+
+func (p Profile) MarshalJSON() ([]byte, error) {
+	if p.IsZero() {
+		return []byte("null"), nil
+	}
+	type Alias Profile
+	return json.Marshal(Alias(p))
 }
