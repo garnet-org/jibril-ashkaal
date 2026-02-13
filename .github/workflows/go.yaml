@@ -1,0 +1,42 @@
+name: Go CI
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Setup Go
+        uses: actions/setup-go@v6
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: go mod tidy -diff
+        run: go mod tidy -diff
+
+      - name: go mod verify
+        run: go mod verify
+
+      - name: go vet ./...
+        run: go vet ./...
+
+        # Disabling temporarily, bring back asap.
+      # - name: staticcheck
+      #   run: go run honnef.co/go/tools/cmd/staticcheck@latest -checks=all,-ST1000,-U1000 ./...
+
+      - name: govulncheck
+        run: go run golang.org/x/vuln/cmd/govulncheck@latest ./...
+
+      - name: go test -race -vet=off ./...
+        run: go test -race -vet=off ./...

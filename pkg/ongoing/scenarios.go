@@ -240,8 +240,8 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 	m["workflow_sha"] = s.WorkflowSHA
 	m["workspace"] = s.Workspace
 
-	m["created_at"] = s.CreatedAt.UTC().Format(time.DateTime)
-	m["updated_at"] = s.UpdateAt.UTC().Format(time.DateTime)
+	m["created_at"] = s.CreatedAt
+	m["updated_at"] = s.UpdateAt
 
 	return m, nil
 }
