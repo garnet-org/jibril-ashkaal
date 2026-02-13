@@ -220,11 +220,12 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 // Security Risk Score.
 
 type Score struct {
-	Source        string  `json:"source"`         // Source and reason of the score.
-	Severity      int     `json:"severity"`       // Severity number of the detection (0-100).
-	SeverityLevel string  `json:"severity_level"` // Severity level of the detection (low, medium, high, critical).
-	Confidence    float64 `json:"confidence"`     // Confidence percentage of the detection (0.0-1.0).
-	RiskScore     float64 `json:"risk_score"`     // Calculated and rounded up risk score of the detection (0.0-100.0).
+	Source        string   `json:"source"`         // Source of the score.
+	Severity      int      `json:"severity"`       // Severity number of the detection (0-100).
+	SeverityLevel string   `json:"severity_level"` // Severity level of the detection (low, medium, high, critical).
+	Confidence    float64  `json:"confidence"`     // Confidence percentage of the detection (0.0-1.0).
+	RiskScore     float64  `json:"risk_score"`     // Calculated and rounded up risk score of the detection (0.0-100.0).
+	Reasons       []string `json:"reasons"`        // Reasons to explain to users why this score.
 }
 
 func (s Score) Clone() Score {
@@ -234,6 +235,7 @@ func (s Score) Clone() Score {
 		SeverityLevel: s.SeverityLevel,
 		Confidence:    s.Confidence,
 		RiskScore:     s.RiskScore,
+		Reasons:       append([]string(nil), s.Reasons...),
 	}
 }
 
@@ -242,7 +244,8 @@ func (s Score) IsZero() bool {
 		s.Severity == 0 &&
 		s.SeverityLevel == "" &&
 		s.Confidence == 0 &&
-		s.RiskScore == 0
+		s.RiskScore == 0 &&
+		len(s.Reasons) == 0
 }
 
 func (s Score) MarshalJSON() ([]byte, error) {
@@ -261,6 +264,10 @@ func (s Score) MarshalJSON() ([]byte, error) {
 	// Omit empty fields.
 	if s.RiskScore != 0 {
 		result["risk_score"] = s.RiskScore
+	}
+
+	if len(s.Reasons) > 0 {
+		result["reasons"] = s.Reasons
 	}
 
 	return json.Marshal(result)
