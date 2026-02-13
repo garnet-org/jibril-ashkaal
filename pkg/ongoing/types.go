@@ -1975,6 +1975,7 @@ type Peer struct {
 	RemoteNames   []string      `json:"remote_names"`
 	UsedPorts     []PortCommAgg `json:"used_ports"`
 	Status        string        `json:"status"`
+	Reputation    string        `json:"reputation"` // The reputation of this peer (unknown, ok, bad).
 	Reason        string        `json:"reason"`
 	Process       string        `json:"process"`
 	Ancestry      []string      `json:"ancestry"`
@@ -1993,6 +1994,7 @@ func (ep Peer) Clone() Peer {
 		RemoteNames:   ep.RemoteNames,
 		UsedPorts:     ep.UsedPorts,
 		Status:        ep.Status,
+		Reputation:    ep.Reputation,
 		Reason:        ep.Reason,
 		Process:       ep.Process,
 		Ancestry:      ancestry,
@@ -2008,6 +2010,7 @@ func (ep Peer) IsZero() bool {
 		len(ep.RemoteNames) == 0 &&
 		ep.RemoteAddress == "" &&
 		ep.Status == "" &&
+		ep.Reputation == "" &&
 		ep.Reason == "" &&
 		ep.Process == "" &&
 		len(ep.Ancestry) == 0 &&
@@ -2044,6 +2047,9 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 	}
 	if ep.Status != "" {
 		result["status"] = ep.Status
+	}
+	if ep.Reputation != "" {
+		result["reputation"] = ep.Reputation
 	}
 	if ep.Reason != "" {
 		result["reason"] = ep.Reason

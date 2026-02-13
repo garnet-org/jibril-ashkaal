@@ -120,6 +120,26 @@ func (c Confidence) Float64() float64 {
 	return float64(c)
 }
 
+// Reputation represents the classification of a remote host.
+// Possible values: unknown, ok, bad.
+type Reputation string
+
+const (
+	// The reputation of the domain or IP is unknown.
+	ReputationUnknown Reputation = "unknown"
+
+	// The reputation of the domain or IP seems good on the
+	// checked databases.
+	ReputationOk Reputation = "ok"
+
+	// The domain or IP is flagged for suspicious or malicious activities.
+	ReputationBad Reputation = "bad"
+)
+
+func (r Reputation) String() string {
+	return string(r)
+}
+
 //
 // Response.
 //
