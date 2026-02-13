@@ -35,6 +35,7 @@ const (
 	KindInfos      Kind = "infos"
 	KindDetections Kind = "detections"
 	KindNetPolicy  Kind = "netpolicy"
+	KindProfile    Kind = "profile"
 	//
 	// ... (detection event names using their pkg names).
 	//

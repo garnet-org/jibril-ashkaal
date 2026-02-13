@@ -7,14 +7,14 @@ import (
 // All detection events have these fields.
 
 type Base struct {
-	UUID       string     `json:"uuid"`                 // The unique ID of the detection.
-	Timestamp  string     `json:"timestamp"`            // The timestamp of the detection.
-	Note       string     `json:"note,omitempty"`       // A note about the detection.
-	Metadata   Metadata   `json:"metadata"`             // The detection metadata.
-	Attenuator Attenuator `json:"attenuator,omitempty"` // The attenuator of the detection.
-	Score      Score      `json:"score,omitempty"`      // Detection Security Risk Score.
-	Background Background `json:"background,omitempty"` // The detection context.
-	Scenario   Scenarios  `json:"scenario,omitempty"`   // GitHub, Kubernetes, Host, etc.
+	UUID       string     `json:"uuid"`       // The unique ID of the detection.
+	Timestamp  string     `json:"timestamp"`  // The timestamp of the detection.
+	Note       string     `json:"note"`       // A note about the detection.
+	Metadata   Metadata   `json:"metadata"`   // The detection metadata.
+	Attenuator Attenuator `json:"attenuator"` // The attenuator of the detection.
+	Score      Score      `json:"score"`      // Detection Security Risk Score.
+	Background Background `json:"background"` // The detection context.
+	Scenario   Scenarios  `json:"scenario"`   // GitHub, Kubernetes, Host, etc.
 }
 
 func (b Base) Clone() Base {
@@ -31,9 +31,14 @@ func (b Base) Clone() Base {
 }
 
 func (b Base) IsZero() bool {
-	return b.UUID == "" && b.Timestamp == "" && b.Note == "" &&
-		b.Metadata.IsZero() && b.Attenuator.IsZero() && b.Score.IsZero() &&
-		b.Background.IsZero() && b.Scenario.IsZero()
+	return b.UUID == "" &&
+		b.Timestamp == "" &&
+		b.Note == "" &&
+		b.Metadata.IsZero() &&
+		b.Attenuator.IsZero() &&
+		b.Score.IsZero() &&
+		b.Background.IsZero() &&
+		b.Scenario.IsZero()
 }
 
 func (b Base) MarshalJSON() ([]byte, error) {
@@ -41,12 +46,13 @@ func (b Base) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
+	// Always included fields.
 	result["uuid"] = b.UUID
 	result["timestamp"] = b.Timestamp
 
+	// Omit empty fields.
 	if b.Note != "" {
 		result["note"] = b.Note
 	}
@@ -69,51 +75,76 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	return json.Marshal(result)
 }
 
-// Scenarios is a slice of Scenario.
-
-type Scenarios []Scenario
-
-func (s Scenarios) Clone() Scenarios {
-	scenarios := make([]Scenario, len(s))
-	copy(scenarios, s)
-	return scenarios
-}
-
-func (s Scenarios) IsZero() bool {
-	return len(s) == 0
-}
-
-func (s Scenarios) MarshalJSON() ([]byte, error) {
-	if s.IsZero() {
-		return []byte("null"), nil
+func unmarshalJSONToMap(data []byte) (map[string]any, error) {
+	var m map[string]any
+	if len(data) == 0 || string(data) == "null" {
+		return nil, nil
 	}
-	type Alias Scenarios
-	return json.Marshal(Alias(s))
+	err := json.Unmarshal(data, &m)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
+func (b Base) MarshalJSONMap() (map[string]any, error) {
+	if b.IsZero() {
+		return nil, nil
+	}
+
+	bBytes, err := b.MarshalJSON()
+	if err != nil {
+		return nil, err
+	}
+
+	m, err := unmarshalJSONToMap(bBytes)
+	if err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // Detection Event Metadata.
 
 type Metadata struct {
-	Kind          string `json:"kind"`                    // Detection event class name.
-	Name          string `json:"name"`                    // Detection recipe name.
-	Format        string `json:"format"`                  // Detection event format.
-	Version       string `json:"version"`                 // Detection event format version.
-	Description   string `json:"description,omitempty"`   // Detection event description.
-	Tactic        string `json:"tactic,omitempty"`        // Detection event MITRE tactic.
-	Technique     string `json:"technique,omitempty"`     // Detection event MITRE technique.
-	SubTechnique  string `json:"subtechnique,omitempty"`  // Detection event MITRE subtechnique.
-	Importance    string `json:"importance,omitempty"`    // Detection event importance.
-	Documentation string `json:"documentation,omitempty"` // Detection event documentation.
+	Kind          string `json:"kind"`          // Detection event class name.
+	Name          string `json:"name"`          // Detection recipe name.
+	Format        string `json:"format"`        // Detection event format.
+	Version       string `json:"version"`       // Detection event format version.
+	Description   string `json:"description"`   // Detection event description.
+	Tactic        string `json:"tactic"`        // Detection event MITRE tactic.
+	Technique     string `json:"technique"`     // Detection event MITRE technique.
+	SubTechnique  string `json:"subtechnique"`  // Detection event MITRE subtechnique.
+	Importance    string `json:"importance"`    // Detection event importance.
+	Documentation string `json:"documentation"` // Detection event documentation.
 }
 
 func (m Metadata) Clone() Metadata {
-	return m
+	return Metadata{
+		Kind:          m.Kind,
+		Name:          m.Name,
+		Format:        m.Format,
+		Version:       m.Version,
+		Description:   m.Description,
+		Tactic:        m.Tactic,
+		Technique:     m.Technique,
+		SubTechnique:  m.SubTechnique,
+		Importance:    m.Importance,
+		Documentation: m.Documentation,
+	}
 }
 
 func (m Metadata) IsZero() bool {
-	return m.Kind == "" && m.Name == "" && m.Format == "" && m.Version == "" &&
-		m.Description == "" && m.Tactic == "" && m.Technique == "" &&
-		m.SubTechnique == "" && m.Importance == "" && m.Documentation == ""
+	return m.Kind == "" &&
+		m.Name == "" &&
+		m.Format == "" &&
+		m.Version == "" &&
+		m.Description == "" &&
+		m.Tactic == "" &&
+		m.Technique == "" &&
+		m.SubTechnique == "" &&
+		m.Importance == "" &&
+		m.Documentation == ""
 }
 
 func (m Metadata) MarshalJSON() ([]byte, error) {
@@ -121,14 +152,15 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
+	// Always included fields.
 	result["kind"] = m.Kind
 	result["name"] = m.Name
 	result["format"] = m.Format
 	result["version"] = m.Version
 
+	// Omit empty fields.
 	if m.Description != "" {
 		result["description"] = m.Description
 	}
@@ -154,20 +186,29 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 // Security Risk Score.
 
 type Score struct {
-	Source        string  `json:"source,omitempty"` // Source and reason of the score.
-	Severity      int     `json:"severity"`         // Severity number of the detection (0-100).
-	SeverityLevel string  `json:"severity_level"`   // Severity level of the detection (low, medium, high, critical).
-	Confidence    float64 `json:"confidence"`       // Confidence percentage of the detection (0.0-1.0).
-	RiskScore     float64 `json:"risk_score"`       // Calculated and rounded up risk score of the detection (0.0-100.0).
+	Source        string  `json:"source"`         // Source and reason of the score.
+	Severity      int     `json:"severity"`       // Severity number of the detection (0-100).
+	SeverityLevel string  `json:"severity_level"` // Severity level of the detection (low, medium, high, critical).
+	Confidence    float64 `json:"confidence"`     // Confidence percentage of the detection (0.0-1.0).
+	RiskScore     float64 `json:"risk_score"`     // Calculated and rounded up risk score of the detection (0.0-100.0).
 }
 
 func (s Score) Clone() Score {
-	return s
+	return Score{
+		Source:        s.Source,
+		Severity:      s.Severity,
+		SeverityLevel: s.SeverityLevel,
+		Confidence:    s.Confidence,
+		RiskScore:     s.RiskScore,
+	}
 }
 
 func (s Score) IsZero() bool {
-	return s.Source == "" && s.Severity == 0 && s.SeverityLevel == "" &&
-		s.Confidence == 0 && s.RiskScore == 0
+	return s.Source == "" &&
+		s.Severity == 0 &&
+		s.SeverityLevel == "" &&
+		s.Confidence == 0 &&
+		s.RiskScore == 0
 }
 
 func (s Score) MarshalJSON() ([]byte, error) {
@@ -175,21 +216,15 @@ func (s Score) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if s.Source != "" {
-		result["source"] = s.Source
-	}
-	if s.Severity != 0 {
-		result["severity"] = s.Severity
-	}
-	if s.SeverityLevel != "" {
-		result["severity_level"] = s.SeverityLevel
-	}
-	if s.Confidence != 0 {
-		result["confidence"] = s.Confidence
-	}
+	// Always included fields.
+	result["source"] = s.Source
+	result["severity"] = s.Severity
+	result["severity_level"] = s.SeverityLevel
+	result["confidence"] = s.Confidence
+
+	// Omit empty fields.
 	if s.RiskScore != 0 {
 		result["risk_score"] = s.RiskScore
 	}
@@ -197,12 +232,34 @@ func (s Score) MarshalJSON() ([]byte, error) {
 	return json.Marshal(result)
 }
 
+// Scenarios is a slice of Scenario.
+
+type Scenarios []Scenario
+
+func (s Scenarios) Clone() Scenarios {
+	scenarios := make([]Scenario, len(s))
+	copy(scenarios, s)
+	return scenarios
+}
+
+func (s Scenarios) IsZero() bool {
+	return len(s) == 0
+}
+
+func (s Scenarios) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+
+	return json.Marshal([]Scenario(s))
+}
+
 // Attenuator.
 
 type Attenuator struct {
 	AttenuatedBy     string  `json:"attenuated_by"`      // The model that attenuated the detection.
 	Interpretation   string  `json:"interpretation"`     // The interpretation of the attenuation.
-	Thinking         string  `json:"thinking,omitempty"` // The thinking of the attenuation.
+	Thinking         string  `json:"thinking"`           // The thinking of the attenuation.
 	IsFalsePositive  bool    `json:"is_false_positive"`  // Whether the detection is a false positive.
 	NewSeverity      int     `json:"new_severity"`       // The new detection severity after attenuation (0-100).
 	NewSeverityLevel string  `json:"new_severity_level"` // The new detection severity level after attenuation (low, medium, high, critical).
@@ -211,13 +268,27 @@ type Attenuator struct {
 }
 
 func (a Attenuator) Clone() Attenuator {
-	return a
+	return Attenuator{
+		AttenuatedBy:     a.AttenuatedBy,
+		Interpretation:   a.Interpretation,
+		Thinking:         a.Thinking,
+		IsFalsePositive:  a.IsFalsePositive,
+		NewSeverity:      a.NewSeverity,
+		NewSeverityLevel: a.NewSeverityLevel,
+		NewConfidence:    a.NewConfidence,
+		NewRiskScore:     a.NewRiskScore,
+	}
 }
 
 func (a Attenuator) IsZero() bool {
-	return a.AttenuatedBy == "" && a.Interpretation == "" && a.Thinking == "" &&
-		!a.IsFalsePositive && a.NewSeverity == 0 && a.NewSeverityLevel == "" &&
-		a.NewConfidence == 0 && a.NewRiskScore == 0
+	return a.AttenuatedBy == "" &&
+		a.Interpretation == "" &&
+		a.Thinking == "" &&
+		!a.IsFalsePositive &&
+		a.NewSeverity == 0 &&
+		a.NewSeverityLevel == "" &&
+		a.NewConfidence == 0 &&
+		a.NewRiskScore == 0
 }
 
 func (a Attenuator) MarshalJSON() ([]byte, error) {
@@ -225,9 +296,9 @@ func (a Attenuator) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
+	// Always included fields.
 	result["attenuated_by"] = a.AttenuatedBy
 	result["interpretation"] = a.Interpretation
 	result["is_false_positive"] = a.IsFalsePositive
@@ -236,6 +307,7 @@ func (a Attenuator) MarshalJSON() ([]byte, error) {
 	result["new_confidence"] = a.NewConfidence
 	result["new_risk_score"] = a.NewRiskScore
 
+	// Omit empty fields.
 	if a.Thinking != "" {
 		result["thinking"] = a.Thinking
 	}
@@ -246,10 +318,10 @@ func (a Attenuator) MarshalJSON() ([]byte, error) {
 // Context.
 
 type Background struct {
-	Files      FileAggregate      `json:"files,omitempty"`
-	Flows      FlowAggregate      `json:"flows,omitempty"`
-	Containers ContainerAggregate `json:"containers,omitempty"`
-	Ancestry   []Process          `json:"ancestry,omitempty"`
+	Files      FileAggregate      `json:"files"`
+	Flows      FlowAggregate      `json:"flows"`
+	Containers ContainerAggregate `json:"containers"`
+	Ancestry   []Process          `json:"ancestry"`
 }
 
 func (b Background) Clone() Background {
@@ -264,7 +336,10 @@ func (b Background) Clone() Background {
 }
 
 func (b Background) IsZero() bool {
-	return b.Files.IsZero() && b.Flows.IsZero() && b.Containers.IsZero() && len(b.Ancestry) == 0
+	return b.Files.IsZero() &&
+		b.Flows.IsZero() &&
+		b.Containers.IsZero() &&
+		len(b.Ancestry) == 0
 }
 
 func (b Background) MarshalJSON() ([]byte, error) {
@@ -272,9 +347,9 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
+	// Omit empty fields.
 	if !b.Files.IsZero() {
 		result["files"] = b.Files
 	}
@@ -305,9 +380,33 @@ func (f FileAccess) Clone() FileAccess {
 	}
 }
 
+func (f FileAccess) IsZero() bool {
+	return f.Base.IsZero() && f.File.IsZero()
+}
+
 func (f FileAccess) MarshalJSON() ([]byte, error) {
-	type Alias FileAccess
-	return json.Marshal(Alias(f))
+	if f.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if !f.Base.IsZero() {
+		baseMap, err := f.Base.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range baseMap {
+			result[k] = v
+		}
+	}
+
+	// Omit empty fields.
+	if !f.File.IsZero() {
+		result["file"] = f.File
+	}
+
+	return json.Marshal(result)
 }
 
 // Execution Detection Event.
@@ -329,8 +428,28 @@ func (e Execution) IsZero() bool {
 }
 
 func (e Execution) MarshalJSON() ([]byte, error) {
-	type Alias Execution
-	return json.Marshal(Alias(e))
+	if e.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if !e.Base.IsZero() {
+		baseMap, err := e.Base.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range baseMap {
+			result[k] = v
+		}
+	}
+
+	// Omit empty fields.
+	if !e.Process.IsZero() {
+		result["process"] = e.Process
+	}
+
+	return json.Marshal(result)
 }
 
 // Network Peers Detection Event.
@@ -352,8 +471,28 @@ func (n NetworkPeer) IsZero() bool {
 }
 
 func (n NetworkPeer) MarshalJSON() ([]byte, error) {
-	type Alias NetworkPeer
-	return json.Marshal(Alias(n))
+	if n.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if !n.Base.IsZero() {
+		baseMap, err := n.Base.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range baseMap {
+			result[k] = v
+		}
+	}
+
+	// Omit empty fields.
+	if !n.Flow.IsZero() {
+		result["flow"] = n.Flow
+	}
+
+	return json.Marshal(result)
 }
 
 // Network Flow Event.
@@ -375,8 +514,28 @@ func (n NetworkFlow) IsZero() bool {
 }
 
 func (n NetworkFlow) MarshalJSON() ([]byte, error) {
-	type Alias NetworkFlow
-	return json.Marshal(Alias(n))
+	if n.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if !n.Base.IsZero() {
+		baseMap, err := n.Base.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range baseMap {
+			result[k] = v
+		}
+	}
+
+	// Omit empty fields.
+	if !n.Flow.IsZero() {
+		result["flow"] = n.Flow
+	}
+
+	return json.Marshal(result)
 }
 
 // Drop IP Detection Event.
@@ -400,34 +559,63 @@ func (d DropIP) Clone() DropIP {
 }
 
 func (d DropIP) IsZero() bool {
-	return d.Base.IsZero() && d.IP == "" && len(d.Names) == 0 && d.Flow.IsZero()
+	return d.Base.IsZero() &&
+		d.IP == "" &&
+		len(d.Names) == 0 &&
+		d.Flow.IsZero()
 }
 
 func (d DropIP) MarshalJSON() ([]byte, error) {
-	type Alias DropIP
-	return json.Marshal(Alias(d))
+	if d.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if !d.Base.IsZero() {
+		baseMap, err := d.Base.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range baseMap {
+			result[k] = v
+		}
+	}
+
+	// Omit empty fields.
+	if d.IP != "" {
+		result["ip"] = d.IP
+	}
+	if len(d.Names) > 0 {
+		result["names"] = d.Names
+	}
+	if !d.Flow.IsZero() {
+		result["flow"] = d.Flow
+	}
+
+	return json.Marshal(result)
 }
 
 // Process.
 
 type Process struct {
-	Start      string     `json:"start"`                 // The start time of the process.
-	Exit       string     `json:"exit"`                  // The exit time of the process.
-	Code       int        `json:"retcode"`               // The return code of the process.
-	UID        uint       `json:"uid"`                   // The user ID of the process.
-	Pid        int        `json:"pid"`                   // The process ID.
-	Ppid       int        `json:"ppid"`                  // The parent process ID.
-	Comm       string     `json:"comm"`                  // The command name.
-	Cmd        string     `json:"cmd"`                   // The command.
-	Exe        string     `json:"exe"`                   // The executable name.
-	Args       string     `json:"args"`                  // The arguments.
-	Envs       string     `json:"envs"`                  // The environment variables.
-	Loader     string     `json:"loader,omitempty"`      // The loader name.
-	PrevExe    string     `json:"prev_exe,omitempty"`    // The previous executable name.
-	PrevArgs   string     `json:"prev_args,omitempty"`   // The previous arguments.
-	PrevEnvs   string     `json:"prev_envs,omitempty"`   // The previous environment variables.
-	PrevLoader string     `json:"prev_loader,omitempty"` // The previous loader name.
-	Namespaces Namespaces `json:"namespaces,omitempty"`  // The namespaces.
+	Start      string     `json:"start"`       // The start time of the process.
+	Exit       string     `json:"exit"`        // The exit time of the process.
+	Code       int        `json:"retcode"`     // The return code of the process.
+	UID        uint       `json:"uid"`         // The user ID of the process.
+	Pid        int        `json:"pid"`         // The process ID.
+	Ppid       int        `json:"ppid"`        // The parent process ID.
+	Comm       string     `json:"comm"`        // The command name.
+	Cmd        string     `json:"cmd"`         // The command.
+	Exe        string     `json:"exe"`         // The executable name.
+	Args       string     `json:"args"`        // The arguments.
+	Envs       string     `json:"envs"`        // The environment variables.
+	Loader     string     `json:"loader"`      // The loader name.
+	PrevExe    string     `json:"prev_exe"`    // The previous executable name.
+	PrevArgs   string     `json:"prev_args"`   // The previous arguments.
+	PrevEnvs   string     `json:"prev_envs"`   // The previous environment variables.
+	PrevLoader string     `json:"prev_loader"` // The previous loader name.
+	Namespaces Namespaces `json:"namespaces"`  // The namespaces.
 }
 
 func (p Process) Clone() Process {
@@ -435,42 +623,120 @@ func (p Process) Clone() Process {
 }
 
 func (p Process) IsZero() bool {
-	return p.Start == "" && p.Exit == "" && p.Code == 0 && p.UID == 0 && p.Pid == 0 &&
-		p.Ppid == 0 && p.Comm == "" && p.Cmd == "" && p.Exe == "" && p.Args == "" &&
-		p.Envs == "" && p.Loader == "" && p.PrevExe == "" && p.PrevArgs == "" &&
-		p.PrevEnvs == "" && p.PrevLoader == "" && p.Namespaces.IsZero()
+	return p.Start == "" &&
+		p.Exit == "" &&
+		p.Code == 0 &&
+		p.UID == 0 &&
+		p.Pid == 0 &&
+		p.Ppid == 0 &&
+		p.Comm == "" &&
+		p.Cmd == "" &&
+		p.Exe == "" &&
+		p.Args == "" &&
+		p.Envs == "" &&
+		p.Loader == "" &&
+		p.PrevExe == "" &&
+		p.PrevArgs == "" &&
+		p.PrevEnvs == "" &&
+		p.PrevLoader == "" &&
+		p.Namespaces.IsZero()
 }
 
 func (p Process) MarshalJSON() ([]byte, error) {
 	if p.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Process
-	return json.Marshal(Alias(p))
+
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["start"] = p.Start
+	result["exit"] = p.Exit
+	result["retcode"] = p.Code
+	result["uid"] = p.UID
+	result["pid"] = p.Pid
+	result["ppid"] = p.Ppid
+	result["comm"] = p.Comm
+	result["cmd"] = p.Cmd
+	result["exe"] = p.Exe
+
+	// Omit empty fields.
+	if p.Args != "" {
+		result["args"] = p.Args
+	}
+	if p.Envs != "" {
+		result["envs"] = p.Envs
+	}
+	if p.Loader != "" {
+		result["loader"] = p.Loader
+	}
+	if p.PrevExe != "" {
+		result["prev_exe"] = p.PrevExe
+	}
+	if p.PrevArgs != "" {
+		result["prev_args"] = p.PrevArgs
+	}
+	if p.PrevEnvs != "" {
+		result["prev_envs"] = p.PrevEnvs
+	}
+	if p.PrevLoader != "" {
+		result["prev_loader"] = p.PrevLoader
+	}
+	if !p.Namespaces.IsZero() {
+		result["namespaces"] = p.Namespaces
+	}
+
+	return json.Marshal(result)
 }
 
 // Namespaces.
 
 type Namespaces struct {
-	MNTNs    uint32 `json:"mnt_ns,omitempty"`    // Mount namespace.
-	PIDNs    uint32 `json:"pid_ns,omitempty"`    // PID namespace.
-	UTSNs    uint32 `json:"uts_ns,omitempty"`    // UTS namespace.
-	IPCNs    uint32 `json:"ipc_ns,omitempty"`    // IPC namespace.
-	NetNs    uint32 `json:"net_ns,omitempty"`    // Network namespace.
-	CgroupNs uint32 `json:"cgroup_ns,omitempty"` // Cgroup namespace.
+	MNTNs    uint32 `json:"mnt_ns"`    // Mount namespace.
+	PIDNs    uint32 `json:"pid_ns"`    // PID namespace.
+	UTSNs    uint32 `json:"uts_ns"`    // UTS namespace.
+	IPCNs    uint32 `json:"ipc_ns"`    // IPC namespace.
+	NetNs    uint32 `json:"net_ns"`    // Network namespace.
+	CgroupNs uint32 `json:"cgroup_ns"` // Cgroup namespace.
 }
 
 func (n Namespaces) IsZero() bool {
-	return n.MNTNs == 0 && n.PIDNs == 0 && n.UTSNs == 0 &&
-		n.IPCNs == 0 && n.NetNs == 0 && n.CgroupNs == 0
+	return n.MNTNs == 0 &&
+		n.PIDNs == 0 &&
+		n.UTSNs == 0 &&
+		n.IPCNs == 0 &&
+		n.NetNs == 0 &&
+		n.CgroupNs == 0
 }
 
 func (n Namespaces) MarshalJSON() ([]byte, error) {
 	if n.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Namespaces
-	return json.Marshal(Alias(n))
+
+	result := make(map[string]any)
+
+	// Omit empty fields.
+	if n.MNTNs != 0 {
+		result["mnt_ns"] = n.MNTNs
+	}
+	if n.PIDNs != 0 {
+		result["pid_ns"] = n.PIDNs
+	}
+	if n.UTSNs != 0 {
+		result["uts_ns"] = n.UTSNs
+	}
+	if n.IPCNs != 0 {
+		result["ipc_ns"] = n.IPCNs
+	}
+	if n.NetNs != 0 {
+		result["net_ns"] = n.NetNs
+	}
+	if n.CgroupNs != 0 {
+		result["cgroup_ns"] = n.CgroupNs
+	}
+
+	return json.Marshal(result)
 }
 
 // File.
@@ -503,9 +769,15 @@ func (f File) Clone() File {
 }
 
 func (f File) IsZero() bool {
-	return f.Path == "" && f.Dir == "" && f.Base == "" && f.Type == "" &&
-		f.Owner.IsZero() && f.Actions.IsZero() && f.Permissions.IsZero() &&
-		f.SpecialBits.IsZero() && f.Metadata.IsZero()
+	return f.Path == "" &&
+		f.Dir == "" &&
+		f.Base == "" &&
+		f.Type == "" &&
+		f.Owner.IsZero() &&
+		f.Actions.IsZero() &&
+		f.Permissions.IsZero() &&
+		f.SpecialBits.IsZero() &&
+		f.Metadata.IsZero()
 }
 
 func (f File) MarshalJSON() ([]byte, error) {
@@ -513,32 +785,22 @@ func (f File) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if f.Path != "" {
-		result["path"] = f.Path
-	}
-	if f.Dir != "" {
-		result["dir"] = f.Dir
-	}
-	if f.Base != "" {
-		result["basename"] = f.Base
-	}
-	if f.Type != "" {
-		result["type"] = f.Type
-	}
-	if !f.Owner.IsZero() {
-		result["owner"] = f.Owner
-	}
+	// Always included fields.
+	result["path"] = f.Path
+	result["dir"] = f.Dir
+	result["basename"] = f.Base
+	result["type"] = f.Type
+	result["owner"] = f.Owner
+	result["special"] = f.SpecialBits
+
+	// Omit empty fields.
 	if !f.Actions.IsZero() {
 		result["actions"] = f.Actions
 	}
 	if !f.Permissions.IsZero() {
 		result["permissions"] = f.Permissions
-	}
-	if !f.SpecialBits.IsZero() {
-		result["special"] = f.SpecialBits
 	}
 	if !f.Metadata.IsZero() {
 		result["metadata"] = f.Metadata
@@ -553,15 +815,18 @@ type FileOwner struct {
 }
 
 func (f FileOwner) IsZero() bool {
+	// Note: root user and group have zero values for UID and GID.
 	return f.UID == 0 && f.GID == 0
 }
 
 func (f FileOwner) MarshalJSON() ([]byte, error) {
-	if f.IsZero() {
-		return []byte("null"), nil
-	}
-	type Alias FileOwner
-	return json.Marshal(Alias(f))
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["uid"] = f.UID
+	result["gid"] = f.GID
+
+	return json.Marshal(result)
 }
 
 type FileSpecialBits struct {
@@ -571,15 +836,25 @@ type FileSpecialBits struct {
 }
 
 func (f FileSpecialBits) IsZero() bool {
+	// Note: this is possible to be true and not zero.
 	return !f.Setuid && !f.Setgid && !f.Sticky
 }
 
 func (f FileSpecialBits) MarshalJSON() ([]byte, error) {
-	if f.IsZero() {
-		return []byte("null"), nil
+	result := make(map[string]any)
+
+	// Omit empty fields.
+	if f.Setuid {
+		result["setuid"] = f.Setuid
 	}
-	type Alias FileSpecialBits
-	return json.Marshal(Alias(f))
+	if f.Setgid {
+		result["setgid"] = f.Setgid
+	}
+	if f.Sticky {
+		result["sticky"] = f.Sticky
+	}
+
+	return json.Marshal(result)
 }
 
 type FilePermissions struct {
@@ -596,17 +871,38 @@ type FilePermissions struct {
 }
 
 func (f FilePermissions) IsZero() bool {
-	return f.Mode == "" && !f.OwnerRead && !f.OwnerWrite && !f.OwnerExec &&
-		!f.GroupRead && !f.GroupWrite && !f.GroupExec &&
-		!f.OtherRead && !f.OtherWrite && !f.OtherExec
+	return f.Mode == "" &&
+		!f.OwnerRead &&
+		!f.OwnerWrite &&
+		!f.OwnerExec &&
+		!f.GroupRead &&
+		!f.GroupWrite &&
+		!f.GroupExec &&
+		!f.OtherRead &&
+		!f.OtherWrite &&
+		!f.OtherExec
 }
 
 func (f FilePermissions) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias FilePermissions
-	return json.Marshal(Alias(f))
+
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["mode"] = f.Mode
+	result["owner_read"] = f.OwnerRead
+	result["owner_write"] = f.OwnerWrite
+	result["owner_exec"] = f.OwnerExec
+	result["group_read"] = f.GroupRead
+	result["group_write"] = f.GroupWrite
+	result["group_exec"] = f.GroupExec
+	result["other_read"] = f.OtherRead
+	result["other_write"] = f.OtherWrite
+	result["other_exec"] = f.OtherExec
+
+	return json.Marshal(result)
 }
 
 type FileMetadata struct {
@@ -617,15 +913,34 @@ type FileMetadata struct {
 }
 
 func (f FileMetadata) IsZero() bool {
-	return f.Size == 0 && f.Access == "" && f.Change == "" && f.Creation == ""
+	return f.Size == 0 &&
+		f.Access == "" &&
+		f.Change == "" &&
+		f.Creation == ""
 }
 
 func (f FileMetadata) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias FileMetadata
-	return json.Marshal(Alias(f))
+
+	result := make(map[string]any)
+
+	// Omit empty fields.
+	if f.Size != 0 {
+		result["size"] = f.Size
+	}
+	if f.Access != "" {
+		result["access"] = f.Access
+	}
+	if f.Change != "" {
+		result["change"] = f.Change
+	}
+	if f.Creation != "" {
+		result["creation"] = f.Creation
+	}
+
+	return json.Marshal(result)
 }
 
 type FileActions struct {
@@ -671,17 +986,49 @@ func (f FileActions) Clone() FileActions {
 }
 
 func (f FileActions) IsZero() bool {
-	return len(f.Actions) == 0 && !f.Open && !f.Read && !f.Write && !f.Exec &&
-		!f.Create && !f.Unlink && !f.Rename && !f.Link && !f.Truncate &&
-		!f.Fsync && !f.Flock && !f.Mmap && !f.Close && !f.Async && !f.Seek
+	return len(f.Actions) == 0 &&
+		!f.Open &&
+		!f.Read &&
+		!f.Write &&
+		!f.Exec &&
+		!f.Create &&
+		!f.Unlink &&
+		!f.Rename &&
+		!f.Link &&
+		!f.Truncate &&
+		!f.Fsync &&
+		!f.Flock &&
+		!f.Mmap &&
+		!f.Close &&
+		!f.Async &&
+		!f.Seek
 }
 
 func (f FileActions) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias FileActions
-	return json.Marshal(Alias(f))
+
+	result := make(map[string]any)
+
+	result["actions"] = f.Actions
+	result["open"] = f.Open
+	result["read"] = f.Read
+	result["write"] = f.Write
+	result["exec"] = f.Exec
+	result["create"] = f.Create
+	result["unlink"] = f.Unlink
+	result["rename"] = f.Rename
+	result["link"] = f.Link
+	result["truncate"] = f.Truncate
+	result["fsync"] = f.Fsync
+	result["flock"] = f.Flock
+	result["mmap"] = f.Mmap
+	result["close"] = f.Close
+	result["async"] = f.Async
+	result["seek"] = f.Seek
+
+	return json.Marshal(result)
 }
 
 // File Aggregate.
@@ -710,10 +1057,10 @@ func (f FileAggregate) MarshalJSON() ([]byte, error) {
 // FSDir.
 
 type FSDir struct {
-	Path  string   `json:"path,omitempty"`  // Absolute path of the directory.
-	Base  string   `json:"base,omitempty"`  // Base name of the directory.
-	Dirs  []FSDir  `json:"dirs,omitempty"`  // Subdirectories.
-	Files []FSFile `json:"files,omitempty"` // Files in this directory.
+	Path  string   `json:"path"`  // Absolute path of the directory.
+	Base  string   `json:"base"`  // Base name of the directory.
+	Dirs  []FSDir  `json:"dirs"`  // Subdirectories.
+	Files []FSFile `json:"files"` // Files in this directory.
 }
 
 func (f FSDir) Clone() FSDir {
@@ -734,7 +1081,10 @@ func (f FSDir) Clone() FSDir {
 }
 
 func (f FSDir) IsZero() bool {
-	return f.Path == "" && f.Base == "" && len(f.Dirs) == 0 && len(f.Files) == 0
+	return f.Path == "" &&
+		f.Base == "" &&
+		len(f.Dirs) == 0 &&
+		len(f.Files) == 0
 }
 
 func (f FSDir) MarshalJSON() ([]byte, error) {
@@ -742,9 +1092,9 @@ func (f FSDir) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
+	// Omit empty fields.
 	if f.Path != "" {
 		result["path"] = f.Path
 	}
@@ -762,12 +1112,12 @@ func (f FSDir) MarshalJSON() ([]byte, error) {
 }
 
 type FSFile struct {
-	Path     string       `json:"path,omitempty"`     // Absolute path of the file.
-	Base     string       `json:"base,omitempty"`     // Base name of the file.
-	Actions  []string     `json:"actions,omitempty"`  // Actions taken on the file.
-	Mode     string       `json:"mode,omitempty"`     // File mode.
-	Owner    FileOwner    `json:"owner,omitempty"`    // File owner.
-	Metadata FileMetadata `json:"metadata,omitempty"` // File metadata.
+	Path     string       `json:"path"`     // Absolute path of the file.
+	Base     string       `json:"base"`     // Base name of the file.
+	Actions  []string     `json:"actions"`  // Actions taken on the file.
+	Mode     string       `json:"mode"`     // File mode.
+	Owner    FileOwner    `json:"owner"`    // File owner.
+	Metadata FileMetadata `json:"metadata"` // File metadata.
 }
 
 func (f FSFile) Clone() FSFile {
@@ -784,8 +1134,12 @@ func (f FSFile) Clone() FSFile {
 }
 
 func (f FSFile) IsZero() bool {
-	return f.Path == "" && f.Base == "" && len(f.Actions) == 0 &&
-		f.Mode == "" && f.Owner.IsZero() && f.Metadata.IsZero()
+	return f.Path == "" &&
+		f.Base == "" &&
+		len(f.Actions) == 0 &&
+		f.Mode == "" &&
+		f.Owner.IsZero() &&
+		f.Metadata.IsZero()
 }
 
 func (f FSFile) MarshalJSON() ([]byte, error) {
@@ -793,24 +1147,16 @@ func (f FSFile) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if f.Path != "" {
-		result["path"] = f.Path
-	}
-	if f.Base != "" {
-		result["base"] = f.Base
-	}
-	if len(f.Actions) > 0 {
-		result["actions"] = f.Actions
-	}
-	if f.Mode != "" {
-		result["mode"] = f.Mode
-	}
-	if !f.Owner.IsZero() {
-		result["owner"] = f.Owner
-	}
+	// Always included fields.
+	result["path"] = f.Path
+	result["base"] = f.Base
+	result["actions"] = f.Actions
+	result["owner"] = f.Owner
+	result["mode"] = f.Mode
+
+	// Omit empty fields.
 	if !f.Metadata.IsZero() {
 		result["metadata"] = f.Metadata
 	}
@@ -821,14 +1167,14 @@ func (f FSFile) MarshalJSON() ([]byte, error) {
 // Flow.
 
 type Flow struct {
-	IPVersion   int    `json:"ip_version"`             // IP version.
-	Proto       string `json:"proto"`                  // Protocol.
-	ICMP        ICMP   `json:"icmp,omitempty"`         // ICMP.
-	Local       Node   `json:"local"`                  // Local node.
-	Remote      Node   `json:"remote"`                 // Remote node.
-	ServicePort int    `json:"service_port,omitempty"` // Service port.
-	Flags       Flags  `json:"flags,omitempty"`        // Flags.
-	Phase       Phase  `json:"phase,omitempty"`        // Flow phase.
+	IPVersion   int    `json:"ip_version"`   // IP version.
+	Proto       string `json:"proto"`        // Protocol.
+	ICMP        ICMP   `json:"icmp"`         // ICMP.
+	Local       Node   `json:"local"`        // Local node.
+	Remote      Node   `json:"remote"`       // Remote node.
+	ServicePort int    `json:"service_port"` // Service port.
+	Flags       Flags  `json:"flags"`        // Flags.
+	Phase       Phase  `json:"phase"`        // Flow phase.
 }
 
 func (f Flow) Clone() Flow {
@@ -845,9 +1191,14 @@ func (f Flow) Clone() Flow {
 }
 
 func (f Flow) IsZero() bool {
-	return f.IPVersion == 0 && f.Proto == "" && f.ICMP.IsZero() &&
-		f.Local.IsZero() && f.Remote.IsZero() && f.ServicePort == 0 &&
-		f.Flags.IsZero() && f.Phase.IsZero()
+	return f.IPVersion == 0 &&
+		f.Proto == "" &&
+		f.ICMP.IsZero() &&
+		f.Local.IsZero() &&
+		f.Remote.IsZero() &&
+		f.ServicePort == 0 &&
+		f.Flags.IsZero() &&
+		f.Phase.IsZero()
 }
 
 func (f Flow) MarshalJSON() ([]byte, error) {
@@ -855,15 +1206,13 @@ func (f Flow) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if f.IPVersion != 0 {
-		result["ip_version"] = f.IPVersion
-	}
-	if f.Proto != "" {
-		result["proto"] = f.Proto
-	}
+	// Always included fields.
+	result["ip_version"] = f.IPVersion
+	result["proto"] = f.Proto
+
+	// Omit empty fields.
 	if !f.ICMP.IsZero() {
 		result["icmp"] = f.ICMP
 	}
@@ -887,8 +1236,8 @@ func (f Flow) MarshalJSON() ([]byte, error) {
 }
 
 type ICMP struct {
-	Type string `json:"type,omitempty"` // ICMP type.
-	Code string `json:"code,omitempty"` // ICMP code.
+	Type string `json:"type"` // ICMP type.
+	Code string `json:"code"` // ICMP code.
 }
 
 func (i ICMP) IsZero() bool {
@@ -900,24 +1249,20 @@ func (i ICMP) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if i.Type != "" {
-		result["type"] = i.Type
-	}
-	if i.Code != "" {
-		result["code"] = i.Code
-	}
+	// Always included fields.
+	result["type"] = i.Type
+	result["code"] = i.Code
 
 	return json.Marshal(result)
 }
 
 type Node struct {
-	Address string   `json:"address,omitempty"` // IP address.
-	Name    string   `json:"name,omitempty"`    // DNS name.
-	Names   []string `json:"names,omitempty"`   // DNS names.
-	Port    int      `json:"port,omitempty"`    // Port.
+	Address string   `json:"address"` // IP address.
+	Name    string   `json:"name"`    // DNS name.
+	Names   []string `json:"names"`   // DNS names.
+	Port    int      `json:"port"`    // Port.
 }
 
 func (n Node) Clone() Node {
@@ -932,7 +1277,10 @@ func (n Node) Clone() Node {
 }
 
 func (n Node) IsZero() bool {
-	return n.Address == "" && n.Name == "" && len(n.Names) == 0 && n.Port == 0
+	return n.Address == "" &&
+		n.Name == "" &&
+		len(n.Names) == 0 &&
+		n.Port == 0
 }
 
 func (n Node) MarshalJSON() ([]byte, error) {
@@ -940,20 +1288,16 @@ func (n Node) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if n.Address != "" {
-		result["address"] = n.Address
-	}
-	if n.Name != "" {
-		result["name"] = n.Name
-	}
+	// Always included fields.
+	result["address"] = n.Address
+	result["name"] = n.Name
+	result["port"] = n.Port
+
+	// Omit empty fields.
 	if len(n.Names) > 0 {
 		result["names"] = n.Names
-	}
-	if n.Port != 0 {
-		result["port"] = n.Port
 	}
 
 	return json.Marshal(result)
@@ -972,8 +1316,15 @@ type Flags struct {
 }
 
 func (f Flags) IsZero() bool {
-	return !f.Ingress && !f.Egress && !f.Incoming && !f.Outgoing &&
-		!f.Started && !f.Ongoing && !f.Ended && !f.Terminator && !f.Terminated
+	return !f.Ingress &&
+		!f.Egress &&
+		!f.Incoming &&
+		!f.Outgoing &&
+		!f.Started &&
+		!f.Ongoing &&
+		!f.Ended &&
+		!f.Terminator &&
+		!f.Terminated
 }
 
 func (f Flags) MarshalJSON() ([]byte, error) {
@@ -981,49 +1332,34 @@ func (f Flags) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if f.Ingress {
-		result["ingress"] = f.Ingress
-	}
-	if f.Egress {
-		result["egress"] = f.Egress
-	}
-	if f.Incoming {
-		result["incoming"] = f.Incoming
-	}
-	if f.Outgoing {
-		result["outgoing"] = f.Outgoing
-	}
-	if f.Started {
-		result["started"] = f.Started
-	}
-	if f.Ongoing {
-		result["ongoing"] = f.Ongoing
-	}
-	if f.Ended {
-		result["ended"] = f.Ended
-	}
-	if f.Terminator {
-		result["terminator"] = f.Terminator
-	}
-	if f.Terminated {
-		result["terminated"] = f.Terminated
-	}
+	// Always included fields.
+	result["ingress"] = f.Ingress
+	result["egress"] = f.Egress
+	result["incoming"] = f.Incoming
+	result["outgoing"] = f.Outgoing
+	result["started"] = f.Started
+	result["ongoing"] = f.Ongoing
+	result["ended"] = f.Ended
+	result["terminator"] = f.Terminator
+	result["terminated"] = f.Terminated
 
 	return json.Marshal(result)
 }
 
 type Phase struct {
-	Direction  string `json:"direction,omitempty"`    // Direction of the flow.
-	InitatedBy string `json:"initiated_by,omitempty"` // Who initiated the flow.
-	Status     string `json:"status,omitempty"`       // Status of the flow.
-	EndedBy    string `json:"ended_by,omitempty"`     // Who ended the flow.
+	Direction  string `json:"direction"`    // Direction of the flow.
+	InitatedBy string `json:"initiated_by"` // Who initiated the flow.
+	Status     string `json:"status"`       // Status of the flow.
+	EndedBy    string `json:"ended_by"`     // Who ended the flow.
 }
 
 func (p Phase) IsZero() bool {
-	return p.Direction == "" && p.InitatedBy == "" && p.Status == "" && p.EndedBy == ""
+	return p.Direction == "" &&
+		p.InitatedBy == "" &&
+		p.Status == "" &&
+		p.EndedBy == ""
 }
 
 func (p Phase) MarshalJSON() ([]byte, error) {
@@ -1031,21 +1367,13 @@ func (p Phase) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if p.Direction != "" {
-		result["direction"] = p.Direction
-	}
-	if p.InitatedBy != "" {
-		result["initiated_by"] = p.InitatedBy
-	}
-	if p.Status != "" {
-		result["status"] = p.Status
-	}
-	if p.EndedBy != "" {
-		result["ended_by"] = p.EndedBy
-	}
+	// Always included fields.
+	result["direction"] = p.Direction
+	result["initiated_by"] = p.InitatedBy
+	result["status"] = p.Status
+	result["ended_by"] = p.EndedBy
 
 	return json.Marshal(result)
 }
@@ -1082,7 +1410,6 @@ func (f FlowAggregate) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
 	if f.IPVersion != 0 {
@@ -1096,9 +1423,9 @@ func (f FlowAggregate) MarshalJSON() ([]byte, error) {
 }
 
 type ProtocolAggregate struct {
-	Proto string                   `json:"proto"`           // Protocol (e.g., TCP, UDP, ICMP).
-	Pairs []ProtocolLocalRemoteAgg `json:"pairs,omitempty"` // List of unique local/remote node pairs for this protocol.
-	ICMPs []ICMP                   `json:"icmps,omitempty"` // ICMP types/codes if protocol is ICMP.
+	Proto string                   `json:"proto"` // Protocol (e.g., TCP, UDP, ICMP).
+	Pairs []ProtocolLocalRemoteAgg `json:"pairs"` // List of unique local/remote node pairs for this protocol.
+	ICMPs []ICMP                   `json:"icmps"` // ICMP types/codes if protocol is ICMP.
 }
 
 func (p ProtocolAggregate) Clone() ProtocolAggregate {
@@ -1116,7 +1443,9 @@ func (p ProtocolAggregate) Clone() ProtocolAggregate {
 }
 
 func (p ProtocolAggregate) IsZero() bool {
-	return p.Proto == "" && len(p.Pairs) == 0 && len(p.ICMPs) == 0
+	return p.Proto == "" &&
+		len(p.Pairs) == 0 &&
+		len(p.ICMPs) == 0
 }
 
 func (p ProtocolAggregate) MarshalJSON() ([]byte, error) {
@@ -1124,7 +1453,6 @@ func (p ProtocolAggregate) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
 	if p.Proto != "" {
@@ -1141,8 +1469,8 @@ func (p ProtocolAggregate) MarshalJSON() ([]byte, error) {
 }
 
 type ProtocolLocalRemoteAgg struct {
-	Nodes      LocalRemotePair `json:"nodes"`                 // Local and remote nodes.
-	PortMatrix []PortCommAgg   `json:"port_matrix,omitempty"` // All port communications between these nodes.
+	Nodes      LocalRemotePair `json:"nodes"`       // Local and remote nodes.
+	PortMatrix []PortCommAgg   `json:"port_matrix"` // All ports used in flows between the nodes.
 }
 
 func (p ProtocolLocalRemoteAgg) Clone() ProtocolLocalRemoteAgg {
@@ -1163,7 +1491,6 @@ func (p ProtocolLocalRemoteAgg) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
 	if !p.Nodes.IsZero() {
@@ -1177,9 +1504,9 @@ func (p ProtocolLocalRemoteAgg) MarshalJSON() ([]byte, error) {
 }
 
 type ProtocolNode struct {
-	Address string   `json:"address"`         // IP address.
-	Name    string   `json:"name"`            // DNS name.
-	Names   []string `json:"names,omitempty"` // DNS names.
+	Address string   `json:"address"` // IP address.
+	Name    string   `json:"name"`    // DNS name.
+	Names   []string `json:"names"`   // DNS names.
 }
 
 func (p ProtocolNode) Clone() ProtocolNode {
@@ -1193,7 +1520,9 @@ func (p ProtocolNode) Clone() ProtocolNode {
 }
 
 func (p ProtocolNode) IsZero() bool {
-	return p.Address == "" && p.Name == "" && len(p.Names) == 0
+	return p.Address == "" &&
+		p.Name == "" &&
+		len(p.Names) == 0
 }
 
 func (p ProtocolNode) MarshalJSON() ([]byte, error) {
@@ -1201,12 +1530,12 @@ func (p ProtocolNode) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if p.Address != "" {
-		result["address"] = p.Address
-	}
+	// Always included fields.
+	result["address"] = p.Address
+
+	// Omit empty fields.
 	if p.Name != "" {
 		result["name"] = p.Name
 	}
@@ -1238,27 +1567,25 @@ func (l LocalRemotePair) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if !l.Local.IsZero() {
-		result["local"] = l.Local
-	}
-	if !l.Remote.IsZero() {
-		result["remote"] = l.Remote
-	}
+	// Always included fields.
+	result["local"] = l.Local
+	result["remote"] = l.Remote
 
 	return json.Marshal(result)
 }
 
 type PortCommAgg struct {
-	SrcPort int   `json:"src_port,omitempty"` // Source port.
-	DstPort int   `json:"dst_port,omitempty"` // Destination port.
-	Phase   Phase `json:"phase,omitempty"`    // Flow phase.
+	SrcPort int   `json:"src_port"` // Source port.
+	DstPort int   `json:"dst_port"` // Destination port.
+	Phase   Phase `json:"phase"`    // Flow phase.
 }
 
 func (p PortCommAgg) IsZero() bool {
-	return p.SrcPort == 0 && p.DstPort == 0 && p.Phase.IsZero()
+	return p.SrcPort == 0 &&
+		p.DstPort == 0 &&
+		p.Phase.IsZero()
 }
 
 func (p PortCommAgg) MarshalJSON() ([]byte, error) {
@@ -1266,15 +1593,13 @@ func (p PortCommAgg) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if p.SrcPort != 0 {
-		result["src_port"] = p.SrcPort
-	}
-	if p.DstPort != 0 {
-		result["dst_port"] = p.DstPort
-	}
+	// Always included fields.
+	result["src_port"] = p.SrcPort
+	result["dst_port"] = p.DstPort
+
+	// Omit empty fields.
 	if !p.Phase.IsZero() {
 		result["phase"] = p.Phase
 	}
@@ -1282,16 +1607,16 @@ func (p PortCommAgg) MarshalJSON() ([]byte, error) {
 	return json.Marshal(result)
 }
 
-// Containers and Namespaces
+// Containers and Namespaces.
 
 type ContainerAggregate struct {
-	MntNamespaceIDs    []ContainerPair `json:"mnt_namespace_ids,omitempty"`
-	PidNamespaceIDs    []ContainerPair `json:"pid_namespace_ids,omitempty"`
-	UtsNamespaceIDs    []ContainerPair `json:"uts_namespace_ids,omitempty"`
-	IpcNamespaceIDs    []ContainerPair `json:"ipc_namespace_ids,omitempty"`
-	NetNamespaceIDs    []ContainerPair `json:"net_namespace_ids,omitempty"`
-	CgroupNamespaceIDs []ContainerPair `json:"cgroup_namespace_ids,omitempty"`
-	Containers         []Container     `json:"containers,omitempty"`
+	MntNamespaceIDs    []ContainerPair `json:"mnt_namespace_ids"`
+	PidNamespaceIDs    []ContainerPair `json:"pid_namespace_ids"`
+	UtsNamespaceIDs    []ContainerPair `json:"uts_namespace_ids"`
+	IpcNamespaceIDs    []ContainerPair `json:"ipc_namespace_ids"`
+	NetNamespaceIDs    []ContainerPair `json:"net_namespace_ids"`
+	CgroupNamespaceIDs []ContainerPair `json:"cgroup_namespace_ids"`
+	Containers         []Container     `json:"containers"`
 }
 
 func (c ContainerAggregate) Clone() ContainerAggregate {
@@ -1323,9 +1648,12 @@ func (c ContainerAggregate) Clone() ContainerAggregate {
 }
 
 func (c ContainerAggregate) IsZero() bool {
-	return len(c.MntNamespaceIDs) == 0 && len(c.PidNamespaceIDs) == 0 &&
-		len(c.UtsNamespaceIDs) == 0 && len(c.IpcNamespaceIDs) == 0 &&
-		len(c.NetNamespaceIDs) == 0 && len(c.CgroupNamespaceIDs) == 0 &&
+	return len(c.MntNamespaceIDs) == 0 &&
+		len(c.PidNamespaceIDs) == 0 &&
+		len(c.UtsNamespaceIDs) == 0 &&
+		len(c.IpcNamespaceIDs) == 0 &&
+		len(c.NetNamespaceIDs) == 0 &&
+		len(c.CgroupNamespaceIDs) == 0 &&
 		len(c.Containers) == 0
 }
 
@@ -1334,9 +1662,9 @@ func (c ContainerAggregate) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
+	// Omit empty fields.
 	if len(c.MntNamespaceIDs) > 0 {
 		result["mnt_namespace_ids"] = c.MntNamespaceIDs
 	}
@@ -1384,27 +1712,29 @@ func (c ContainerPair) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
+	// Always included fields.
+	result["id"] = c.ID
+
+	// Omit empty fields.
 	if c.Name != "" {
 		result["name"] = c.Name
-	}
-	if c.ID != "" {
-		result["id"] = c.ID
 	}
 
 	return json.Marshal(result)
 }
 
 type Mount struct {
-	Source      string `json:"source,omitempty"`
-	Destination string `json:"destination,omitempty"`
-	Type        string `json:"type,omitempty"`
+	Source      string `json:"source"`
+	Destination string `json:"destination"`
+	Type        string `json:"type"`
 }
 
 func (m Mount) IsZero() bool {
-	return m.Source == "" && m.Destination == "" && m.Type == ""
+	return m.Source == "" &&
+		m.Destination == "" &&
+		m.Type == ""
 }
 
 func (m Mount) MarshalJSON() ([]byte, error) {
@@ -1412,50 +1742,44 @@ func (m Mount) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
-	if m.Source != "" {
-		result["source"] = m.Source
-	}
-	if m.Destination != "" {
-		result["destination"] = m.Destination
-	}
-	if m.Type != "" {
-		result["type"] = m.Type
-	}
+	// Always included fields.
+	result["source"] = m.Source
+	result["destination"] = m.Destination
+	result["type"] = m.Type
 
 	return json.Marshal(result)
 }
 
 type Container struct {
-	ID           string     `json:"id"`                      // Container ID.
-	Name         string     `json:"name,omitempty"`          // Container name.
-	HostName     string     `json:"hostname,omitempty"`      // Host name.
-	ImageID      string     `json:"image_id,omitempty"`      // Image ID.
-	Image        string     `json:"image,omitempty"`         // Image name.
-	Version      string     `json:"version,omitempty"`       // Image version.
-	Runtime      string     `json:"runtime,omitempty"`       // Container runtime ("docker", "containerd", etc).
-	Driver       string     `json:"driver,omitempty"`        // Container driver ("overlay2", "aufs", etc).
-	PID          int        `json:"pid,omitempty"`           // Process ID.
-	ExitCode     int        `json:"exit_code,omitempty"`     // Exit code.
-	Status       string     `json:"status,omitempty"`        // Current status.
-	IsAttached   bool       `json:"is_attached,omitempty"`   // Whether the container is attached to the host.
-	Path         string     `json:"path,omitempty"`          // Path to the container executable.
-	Cwd          string     `json:"cwd,omitempty"`           // Current working directory.
-	CreatedAt    string     `json:"created_at,omitempty"`    // Creation time, RFC3339 string.
-	StartedAt    string     `json:"started_at,omitempty"`    // Start time, RFC3339 string.
-	FinishedAt   string     `json:"finished_at,omitempty"`   // Finish time, RFC3339 string.
-	Mounts       []Mount    `json:"mounts,omitempty"`        // Mounts.
-	NetworkMode  string     `json:"network_mode,omitempty"`  // Network mode.
-	CgroupnsMode string     `json:"cgroupns_mode,omitempty"` // Cgroup namespace mode.
-	IpcMode      string     `json:"ipc_mode,omitempty"`      // IPC mode.
-	PidMode      string     `json:"pid_mode,omitempty"`      // PID mode.
-	UsernsMode   string     `json:"userns_mode,omitempty"`   // User namespace mode.
-	UTSMode      string     `json:"uts_mode,omitempty"`      // UTS namespace mode.
-	Env          []string   `json:"env,omitempty"`           // Environment variables.
-	Cmd          []string   `json:"cmd,omitempty"`           // Command.
-	Namespaces   Namespaces `json:"namespaces,omitempty"`    // Namespaces.
+	ID           string     `json:"id"`            // Container ID.
+	Name         string     `json:"name"`          // Container name.
+	HostName     string     `json:"hostname"`      // Host name.
+	ImageID      string     `json:"image_id"`      // Image ID.
+	Image        string     `json:"image"`         // Image name.
+	Version      string     `json:"version"`       // Image version.
+	Runtime      string     `json:"runtime"`       // Container runtime ("docker", "containerd", etc).
+	Driver       string     `json:"driver"`        // Container driver ("overlay2", "aufs", etc).
+	PID          int        `json:"pid"`           // Process ID.
+	ExitCode     int        `json:"exit_code"`     // Exit code.
+	Status       string     `json:"status"`        // Current status.
+	IsAttached   bool       `json:"is_attached"`   // Whether the container is attached to the host.
+	Path         string     `json:"path"`          // Path to the container executable.
+	Cwd          string     `json:"cwd"`           // Current working directory.
+	CreatedAt    string     `json:"created_at"`    // Creation time, RFC3339 string.
+	StartedAt    string     `json:"started_at"`    // Start time, RFC3339 string.
+	FinishedAt   string     `json:"finished_at"`   // Finish time, RFC3339 string.
+	Mounts       []Mount    `json:"mounts"`        // Mounts.
+	NetworkMode  string     `json:"network_mode"`  // Network mode.
+	CgroupnsMode string     `json:"cgroupns_mode"` // Cgroup namespace mode.
+	IpcMode      string     `json:"ipc_mode"`      // IPC mode.
+	PidMode      string     `json:"pid_mode"`      // PID mode.
+	UsernsMode   string     `json:"userns_mode"`   // User namespace mode.
+	UTSMode      string     `json:"uts_mode"`      // UTS namespace mode.
+	Env          []string   `json:"env"`           // Environment variables.
+	Cmd          []string   `json:"cmd"`           // Command.
+	Namespaces   Namespaces `json:"namespaces"`    // Namespaces.
 }
 
 func (c Container) Clone() Container {
@@ -1497,15 +1821,33 @@ func (c Container) Clone() Container {
 }
 
 func (c Container) IsZero() bool {
-	return c.ID == "" && c.Name == "" && c.HostName == "" &&
-		c.ImageID == "" && c.Image == "" && c.Version == "" &&
-		c.Runtime == "" && c.Driver == "" && c.PID == 0 &&
-		c.ExitCode == 0 && c.Status == "" && !c.IsAttached &&
-		c.Path == "" && c.Cwd == "" && c.CreatedAt == "" &&
-		c.StartedAt == "" && c.FinishedAt == "" && len(c.Mounts) == 0 &&
-		c.NetworkMode == "" && c.CgroupnsMode == "" && c.IpcMode == "" &&
-		c.PidMode == "" && c.UsernsMode == "" && c.UTSMode == "" &&
-		len(c.Env) == 0 && len(c.Cmd) == 0 && c.Namespaces.IsZero()
+	return c.ID == "" &&
+		c.Name == "" &&
+		c.HostName == "" &&
+		c.ImageID == "" &&
+		c.Image == "" &&
+		c.Version == "" &&
+		c.Runtime == "" &&
+		c.Driver == "" &&
+		c.PID == 0 &&
+		c.ExitCode == 0 &&
+		c.Status == "" &&
+		!c.IsAttached &&
+		c.Path == "" &&
+		c.Cwd == "" &&
+		c.CreatedAt == "" &&
+		c.StartedAt == "" &&
+		c.FinishedAt == "" &&
+		len(c.Mounts) == 0 &&
+		c.NetworkMode == "" &&
+		c.CgroupnsMode == "" &&
+		c.IpcMode == "" &&
+		c.PidMode == "" &&
+		c.UsernsMode == "" &&
+		c.UTSMode == "" &&
+		len(c.Env) == 0 &&
+		len(c.Cmd) == 0 &&
+		c.Namespaces.IsZero()
 }
 
 func (c Container) MarshalJSON() ([]byte, error) {
@@ -1513,7 +1855,6 @@ func (c Container) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	// Build a map with only non-zero fields.
 	result := make(map[string]any)
 
 	result["id"] = c.ID
@@ -1600,179 +1941,248 @@ func (c Container) MarshalJSON() ([]byte, error) {
 	return json.Marshal(result)
 }
 
-type WorkflowRun struct {
-	Actor      string `json:"actor,omitempty"`        // The username of the user that triggered the workflow run. From GITHUB_ACTOR.
-	Commit     string `json:"commit,omitempty"`       // The commit SHA that triggered the workflow. From GITHUB_SHA.
-	RunID      string `json:"run_id"`                 // The unique ID of the workflow run. From GITHUB_RUN_ID.
-	RunRef     string `json:"run_ref,omitempty"`      // The fully-formed ref of the branch or tag that triggered the workflow run. From GITHUB_REF.
-	RunRefName string `json:"run_ref_name,omitempty"` // The short ref name of the branch or tag that triggered the workflow run. From GITHUB_REF_NAME.
-	Repository string `json:"repository"`             // The owner and repository name of the workflow. From GITHUB_REPOSITORY.
-	Workflow   string `json:"workflow"`               // The name of the workflow. From GITHUB_WORKFLOW.
-	StartTime  string `json:"start_time,omitempty"`   // The start time of the workflow run.
-	EndTime    string `json:"end_time,omitempty"`     // The end time of the workflow run.
+//
+// Profiling event.
+//
+
+// Egress Peer: A single remote peer that supports the egress profile.
+
+type Peer struct {
+	Protocol      string        `json:"protocol"`
+	LocalAddress  string        `json:"local_address"`
+	LocalName     string        `json:"local_name"`
+	LocalNames    []string      `json:"local_names"`
+	RemoteAddress string        `json:"remote_address"`
+	RemoteName    string        `json:"remote_name"`
+	RemoteNames   []string      `json:"remote_names"`
+	UsedPorts     []PortCommAgg `json:"used_ports"`
+	Status        string        `json:"status"`
+	Reason        string        `json:"reason"`
+	Process       string        `json:"process"`
+	Ancestry      []string      `json:"ancestry"`
 }
 
-func (r WorkflowRun) Clone() WorkflowRun {
-	return r
-}
-
-func (r WorkflowRun) IsZero() bool {
-	return r.Actor == "" && r.Commit == "" &&
-		r.RunID == "" && r.RunRef == "" &&
-		r.Repository == "" && r.Workflow == ""
-}
-
-func (r WorkflowRun) MarshalJSON() ([]byte, error) {
-	if r.IsZero() {
-		return []byte("null"), nil
-	}
-	type Alias WorkflowRun
-	return json.Marshal(Alias(r))
-}
-
-type EgressPeer struct {
-	Domain      string   `json:"domain,omitempty"`       // Target domain of the remote peer.
-	PeerName    string   `json:"peer_name,omitempty"`    // The qualified domain name of the remote peer.
-	PeerAddress string   `json:"peer_address,omitempty"` // The IP address of the remote peer.
-	Status      string   `json:"status,omitempty"`       // The classification of this peer name and its domain.
-	Reason      string   `json:"reason,omitempty"`       // The reason why this domain was flagged.
-	Process     string   `json:"process,omitempty"`      // The current process that triggered this egress.
-	Ancestry    []string `json:"ancestry,omitempty"`     // The process hierarchy that triggered this egress.
-}
-
-func (ep EgressPeer) Clone() EgressPeer {
+func (ep Peer) Clone() Peer {
 	ancestry := make([]string, len(ep.Ancestry))
 	copy(ancestry, ep.Ancestry)
-	return EgressPeer{
-		Domain:      ep.Domain,
-		PeerName:    ep.PeerName,
-		PeerAddress: ep.PeerAddress,
-		Status:      ep.Status,
-		Reason:      ep.Reason,
-		Process:     ep.Process,
-		Ancestry:    ancestry,
+	return Peer{
+		Protocol:      ep.Protocol,
+		LocalAddress:  ep.LocalAddress,
+		LocalName:     ep.LocalName,
+		LocalNames:    ep.LocalNames,
+		RemoteAddress: ep.RemoteAddress,
+		RemoteName:    ep.RemoteName,
+		RemoteNames:   ep.RemoteNames,
+		UsedPorts:     ep.UsedPorts,
+		Status:        ep.Status,
+		Reason:        ep.Reason,
+		Process:       ep.Process,
+		Ancestry:      ancestry,
 	}
 }
 
-func (ep EgressPeer) IsZero() bool {
-	return ep.Domain == "" && ep.PeerName == "" && ep.PeerAddress == ""
+func (ep Peer) IsZero() bool {
+	return ep.Protocol == "" &&
+		ep.LocalName == "" &&
+		ep.LocalAddress == "" &&
+		ep.RemoteName == "" &&
+		len(ep.LocalNames) == 0 &&
+		len(ep.RemoteNames) == 0 &&
+		ep.RemoteAddress == "" &&
+		ep.Status == "" &&
+		ep.Reason == "" &&
+		ep.Process == "" &&
+		len(ep.Ancestry) == 0 &&
+		len(ep.UsedPorts) == 0
 }
 
-func (ep EgressPeer) MarshalJSON() ([]byte, error) {
+func (ep Peer) MarshalJSON() ([]byte, error) {
 	if ep.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias EgressPeer
-	return json.Marshal(Alias(ep))
+
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["protocol"] = ep.Protocol
+	result["local_name"] = ep.LocalName
+	result["local_address"] = ep.LocalAddress
+
+	// Omit empty fields.
+	if ep.RemoteName != "" {
+		result["remote_name"] = ep.RemoteName
+	}
+	if ep.RemoteAddress != "" {
+		result["remote_address"] = ep.RemoteAddress
+	}
+	if len(ep.LocalNames) > 0 {
+		result["local_names"] = ep.LocalNames
+	}
+	if len(ep.RemoteNames) > 0 {
+		result["remote_names"] = ep.RemoteNames
+	}
+	if len(ep.UsedPorts) > 0 {
+		result["used_ports"] = ep.UsedPorts
+	}
+	if ep.Status != "" {
+		result["status"] = ep.Status
+	}
+	if ep.Reason != "" {
+		result["reason"] = ep.Reason
+	}
+	if ep.Process != "" {
+		result["process"] = ep.Process
+	}
+	if len(ep.Ancestry) > 0 {
+		result["ancestry"] = ep.Ancestry
+	}
+
+	return json.Marshal(result)
 }
 
+// Egress: A collection of egress traffic that supports the profile.
+
 type Egress struct {
-	EgressPeers    []EgressPeer `json:"egress_peers,omitempty"`    // Outbound detailed traffic.
-	UniqueDomains  []string     `json:"unique_domains,omitempty"`  // List of unique domains.
-	TotalDomains   uint         `json:"total_domains,omitempty"`   // Total outbound unique domains.
-	FlaggedDomains uint         `json:"flagged_domains,omitempty"` // Total flagged unique domains.
+	Peers       []Peer   `json:"peers"`
+	SeenDomains []string `json:"seen_domains"`
 }
 
 func (e Egress) Clone() Egress {
-	epeers := make([]EgressPeer, len(e.EgressPeers))
-	udomains := make([]string, len(e.UniqueDomains))
-	for i, peer := range e.EgressPeers {
-		epeers[i] = peer.Clone()
+	uniqueDomains := make([]string, len(e.SeenDomains))
+	copy(uniqueDomains, e.SeenDomains)
+	egressPeers := make([]Peer, len(e.Peers))
+	for i, ep := range e.Peers {
+		egressPeers[i] = ep.Clone()
 	}
-	copy(udomains, e.UniqueDomains)
 	return Egress{
-		EgressPeers:    epeers,
-		UniqueDomains:  udomains,
-		TotalDomains:   e.TotalDomains,
-		FlaggedDomains: e.FlaggedDomains,
+		Peers:       egressPeers,
+		SeenDomains: uniqueDomains,
 	}
 }
 
 func (e Egress) IsZero() bool {
-	return e.TotalDomains == 0 && len(e.EgressPeers) == 0 &&
-		len(e.UniqueDomains) == 0
+	return len(e.Peers) == 0 &&
+		len(e.SeenDomains) == 0
 }
 
 func (e Egress) MarshalJSON() ([]byte, error) {
 	if e.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Egress
-	return json.Marshal(Alias(e))
+
+	result := make(map[string]any)
+
+	// Omit empty fields.
+	if len(e.Peers) > 0 {
+		result["peers"] = e.Peers
+	}
+	if len(e.SeenDomains) > 0 {
+		result["seen_domains"] = e.SeenDomains
+	}
+
+	return json.Marshal(result)
 }
 
-type NetworkProfile struct {
-	Egress Egress `json:"egress,omitempty"` // Egress traffic.
+// NetProfile: A collection of network telemetry that supports the profile.
+
+type NetProfile struct {
+	Egress Egress `json:"egress"`
 }
 
-func (np NetworkProfile) Clone() NetworkProfile {
-	return NetworkProfile{
+func (np NetProfile) Clone() NetProfile {
+	return NetProfile{
 		Egress: np.Egress.Clone(),
 	}
 }
 
-func (np NetworkProfile) IsZero() bool {
+func (np NetProfile) IsZero() bool {
 	return np.Egress.IsZero()
 }
 
-func (np NetworkProfile) MarshalJSON() ([]byte, error) {
+func (np NetProfile) MarshalJSON() ([]byte, error) {
 	if np.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias NetworkProfile
-	return json.Marshal(Alias(np))
+
+	result := make(map[string]any)
+
+	// Always included field.
+	result["egress"] = np.Egress
+
+	return json.Marshal(result)
 }
 
-type NetworkTelemetry struct {
-	EgressTotalDomains     uint `json:"egress_total_domains,omitempty"`     // Total outbound domains.
-	EgressTotalConnections uint `json:"egress_total_connections,omitempty"` // Total outbound connections.
+// NetTelemetry: Summary of network telemetry for the profile.
+
+type NetTelemetry struct {
+	EgressTotalDomains     uint `json:"egress_total_domains"`
+	EgressTotalConnections uint `json:"egress_total_connections"`
 }
 
-func (nt NetworkTelemetry) Clone() NetworkTelemetry {
-	return nt
+func (nt NetTelemetry) Clone() NetTelemetry {
+	return NetTelemetry{
+		EgressTotalDomains:     nt.EgressTotalDomains,
+		EgressTotalConnections: nt.EgressTotalConnections,
+	}
 }
-func (nt NetworkTelemetry) IsZero() bool {
+
+func (nt NetTelemetry) IsZero() bool {
 	return nt.EgressTotalDomains == 0 && nt.EgressTotalConnections == 0
 }
 
-func (nt NetworkTelemetry) MarshalJSON() ([]byte, error) {
+func (nt NetTelemetry) MarshalJSON() ([]byte, error) {
 	if nt.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias NetworkTelemetry
-	return json.Marshal(Alias(nt))
+
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["egress_total_domains"] = nt.EgressTotalDomains
+	result["egress_total_connections"] = nt.EgressTotalConnections
+
+	return json.Marshal(result)
 }
 
+// Telemetry: A collection of telemetry data that supports the profile.
+
 type Telemetry struct {
-	NetworkTelemetry NetworkTelemetry `json:"network_telemetry,omitempty"` // Observed Network telemetry.
+	NetTelemetry NetTelemetry `json:"network_telemetry"`
 }
 
 func (t Telemetry) Clone() Telemetry {
 	return Telemetry{
-		NetworkTelemetry: t.NetworkTelemetry.Clone(),
+		NetTelemetry: t.NetTelemetry.Clone(),
 	}
 }
 
 func (t Telemetry) IsZero() bool {
-	return t.NetworkTelemetry.IsZero()
+	return t.NetTelemetry.IsZero()
 }
 
 func (t Telemetry) MarshalJSON() ([]byte, error) {
 	if t.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Telemetry
-	return json.Marshal(Alias(t))
+
+	result := make(map[string]any)
+
+	// Always included field.
+	result["network_telemetry"] = t.NetTelemetry
+
+	return json.Marshal(result)
 }
 
+// Evidence: A single piece of evidence that supports an assertion.
+
 type Evidence struct {
-	Timestamp   string   `json:"timestamp,omitempty"`    // Timestamp of the evidence.
-	EventKind   string   `json:"event_kind,omitempty"`   // Event class name.
-	Domain      string   `json:"domain,omitempty"`       // Target domain.
-	PeerName    string   `json:"peer_name,omitempty"`    // The qualified domain name of the remote peer.
-	PeerAddress string   `json:"peer_address,omitempty"` // The IP address of the remote peer.
-	Process     string   `json:"process,omitempty"`      // Current process.
-	Ancestry    []string `json:"ancestry,omitempty"`     // Process hierarchy.
+	Timestamp   string   `json:"timestamp"`
+	EventKind   string   `json:"event_kind"`
+	Domain      string   `json:"domain"`
+	PeerName    string   `json:"peer_name"`
+	PeerAddress string   `json:"peer_address"`
+	Process     string   `json:"process"`
+	Ancestry    []string `json:"ancestry"`
 }
 
 func (e Evidence) Clone() Evidence {
@@ -1790,29 +2200,60 @@ func (e Evidence) Clone() Evidence {
 }
 
 func (e Evidence) IsZero() bool {
-	return e.Domain == "" && e.PeerName == "" && e.PeerAddress == ""
+	return e.Timestamp == "" &&
+		e.EventKind == "" &&
+		e.Domain == "" &&
+		e.PeerName == "" &&
+		e.PeerAddress == "" &&
+		e.Process == "" &&
+		len(e.Ancestry) == 0
 }
 
 func (e Evidence) MarshalJSON() ([]byte, error) {
 	if e.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Evidence
-	return json.Marshal(Alias(e))
+
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["timestamp"] = e.Timestamp
+	result["event_kind"] = e.EventKind
+
+	// Omit empty fields.
+	if e.Domain != "" {
+		result["domain"] = e.Domain
+	}
+	if e.PeerName != "" {
+		result["peer_name"] = e.PeerName
+	}
+	if e.PeerAddress != "" {
+		result["peer_address"] = e.PeerAddress
+	}
+	if e.Process != "" {
+		result["process"] = e.Process
+	}
+	if len(e.Ancestry) > 0 {
+		result["ancestry"] = e.Ancestry
+	}
+
+	return json.Marshal(result)
 }
 
+// Assertion: A list of evidence that supports the assertion.
+
 type Assertion struct {
-	ID        string     `json:"id,omitempty"`         // Assertion ID or class.
-	EventKind string     `json:"event_kind,omitempty"` // Event class name.
-	Result    string     `json:"result,omitempty"`     // Assertion result.
-	Details   string     `json:"details,omitempty"`    // Assertion details.
-	Evidence  []Evidence `json:"evidence,omitempty"`   // List of evidence.
+	ID        string     `json:"id"`
+	EventKind string     `json:"event_kind"`
+	Result    string     `json:"result"`
+	Details   string     `json:"details"`
+	Evidence  []Evidence `json:"evidence"`
 }
 
 func (a Assertion) Clone() Assertion {
 	evidence := make([]Evidence, len(a.Evidence))
-	for i, ev := range a.Evidence {
-		evidence[i] = ev.Clone()
+	for i, e := range a.Evidence {
+		evidence[i] = e.Clone()
 	}
 	return Assertion{
 		ID:        a.ID,
@@ -1824,7 +2265,10 @@ func (a Assertion) Clone() Assertion {
 }
 
 func (a Assertion) IsZero() bool {
-	return a.ID == "" && a.Result == "" &&
+	return a.ID == "" &&
+		a.EventKind == "" &&
+		a.Result == "" &&
+		a.Details == "" &&
 		len(a.Evidence) == 0
 }
 
@@ -1832,19 +2276,34 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 	if a.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Assertion
-	return json.Marshal(Alias(a))
+
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["id"] = a.ID
+	result["event_kind"] = a.EventKind
+
+	// Omit empty fields.
+	if a.Result != "" {
+		result["result"] = a.Result
+	}
+	if a.Details != "" {
+		result["details"] = a.Details
+	}
+	if len(a.Evidence) > 0 {
+		result["evidence"] = a.Evidence
+	}
+
+	return json.Marshal(result)
 }
 
 // Behavior Profile Event.
 
 type Profile struct {
 	Base
-	SchemaVersion string         `json:"schema_version"`      // Schema version.
-	Run           WorkflowRun    `json:"run"`                 // Workflow run information.
-	Network       NetworkProfile `json:"network"`             // Network profile.
-	Assertions    []Assertion    `json:"assertions"`          // Profile assertions.
-	Telemetry     Telemetry      `json:"telemetry,omitempty"` // Profile telemetry.
+	Network    NetProfile  `json:"network"`
+	Assertions []Assertion `json:"assertions"`
+	Telemetry  Telemetry   `json:"telemetry"`
 }
 
 func (p Profile) Clone() Profile {
@@ -1853,24 +2312,46 @@ func (p Profile) Clone() Profile {
 		assertions[i] = a.Clone()
 	}
 	return Profile{
-		Base:          p.Base.Clone(),
-		SchemaVersion: p.SchemaVersion,
-		Run:           p.Run.Clone(),
-		Network:       p.Network.Clone(),
-		Assertions:    assertions,
-		Telemetry:     p.Telemetry.Clone(),
+		Base:       p.Base.Clone(),
+		Network:    p.Network.Clone(),
+		Assertions: assertions,
+		Telemetry:  p.Telemetry.Clone(),
 	}
 }
 
 func (p Profile) IsZero() bool {
-	return p.Run.IsZero() && p.Network.IsZero() &&
-		len(p.Assertions) == 0 && p.Telemetry.IsZero()
+	return p.Base.IsZero() &&
+		p.Network.IsZero() &&
+		len(p.Assertions) == 0 &&
+		p.Telemetry.IsZero()
 }
 
 func (p Profile) MarshalJSON() ([]byte, error) {
 	if p.IsZero() {
 		return []byte("null"), nil
 	}
-	type Alias Profile
-	return json.Marshal(Alias(p))
+
+	result := make(map[string]any)
+
+	if !p.Base.IsZero() {
+		baseMap, err := p.Base.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		for k, v := range baseMap {
+			result[k] = v
+		}
+	}
+
+	if !p.Network.IsZero() {
+		result["network"] = p.Network
+	}
+	if len(p.Assertions) > 0 {
+		result["assertions"] = p.Assertions
+	}
+	if !p.Telemetry.IsZero() {
+		result["telemetry"] = p.Telemetry
+	}
+
+	return json.Marshal(result)
 }
