@@ -2,39 +2,33 @@ package ongoing
 
 import (
 	"encoding/json"
-	"strconv"
 	"time"
 )
 
-type ScenarioTypeNum int
+type ScenarioTypeName string
 
 const (
-	ScenarioTypeGitHub ScenarioTypeNum = iota + 1
-	ScenarioTypeHostOS
-	ScenarioTypeK8S
-	ScenarioTypeNumMax
+	ScenarioTypeGitHub ScenarioTypeName = "github"
+	ScenarioTypeHostOS ScenarioTypeName = "hostos"
+	ScenarioTypeK8S    ScenarioTypeName = "k8s"
 )
 
-func (s ScenarioTypeNum) String() string {
+func (s ScenarioTypeName) Num() int {
 	switch s {
 	case ScenarioTypeGitHub:
-		return "github"
+		return 1
 	case ScenarioTypeHostOS:
-		return "hostos"
+		return 2
 	case ScenarioTypeK8S:
-		return "k8s"
+		return 3
 	}
-	return "unknown"
-}
-
-func (s ScenarioTypeNum) IsValid() bool {
-	return s > 0 && s < ScenarioTypeNumMax
+	return 0
 }
 
 type Scenarios struct {
-	GitHub ScenarioGitHub
-	HostOS ScenarioHostOS
-	K8S    ScenarioK8S
+	GitHub ScenarioGitHub `json:"github"`
+	HostOS ScenarioHostOS `json:"hostos"`
+	K8S    ScenarioK8S    `json:"k8s"`
 }
 
 func (s Scenarios) Clone() Scenarios {
@@ -101,43 +95,45 @@ type ScenarioType interface {
 // Scenario GitHub.
 
 type ScenarioGitHub struct {
-	ID                string    `json:"id"`
-	Action            string    `json:"action"`
-	Actor             string    `json:"actor"`
-	ActorID           string    `json:"actor_id"`
-	EventName         string    `json:"event_name"`
-	Job               string    `json:"job"`
-	Ref               string    `json:"ref"`
-	RefName           string    `json:"ref_name"`
-	RefProtected      bool      `json:"ref_protected"`
-	RefType           string    `json:"ref_type"`
-	Repository        string    `json:"repository"`
-	RepositoryID      string    `json:"repository_id"`
-	RepositoryOwner   string    `json:"repository_owner"`
-	RepositoryOwnerID string    `json:"repository_owner_id"`
-	RunAttempt        string    `json:"run_attempt"`
-	RunID             string    `json:"run_id"`
-	RunNumber         string    `json:"run_number"`
-	RunnerArch        string    `json:"runner_arch"`
-	RunnerOS          string    `json:"runner_os"`
-	ServerURL         string    `json:"server_url"`
-	SHA               string    `json:"sha"`
-	TriggeringActor   string    `json:"triggering_actor"`
-	Workflow          string    `json:"workflow"`
-	WorkflowRef       string    `json:"workflow_ref"`
-	WorkflowSHA       string    `json:"workflow_sha"`
-	Workspace         string    `json:"workspace"`
-	CreatedAt         time.Time `json:"created_at"`
-	UpdateAt          time.Time `json:"updated_at"`
+	ScenarioType      ScenarioTypeName `json:"scenario_type"`
+	ID                string           `json:"id"`
+	Action            string           `json:"action"`
+	Actor             string           `json:"actor"`
+	ActorID           string           `json:"actor_id"`
+	EventName         string           `json:"event_name"`
+	Job               string           `json:"job"`
+	Ref               string           `json:"ref"`
+	RefName           string           `json:"ref_name"`
+	RefProtected      string           `json:"ref_protected"`
+	RefType           string           `json:"ref_type"`
+	Repository        string           `json:"repository"`
+	RepositoryID      string           `json:"repository_id"`
+	RepositoryOwner   string           `json:"repository_owner"`
+	RepositoryOwnerID string           `json:"repository_owner_id"`
+	RunAttempt        string           `json:"run_attempt"`
+	RunID             string           `json:"run_id"`
+	RunNumber         string           `json:"run_number"`
+	RunnerArch        string           `json:"runner_arch"`
+	RunnerOS          string           `json:"runner_os"`
+	ServerURL         string           `json:"server_url"`
+	SHA               string           `json:"sha"`
+	TriggeringActor   string           `json:"triggering_actor"`
+	Workflow          string           `json:"workflow"`
+	WorkflowRef       string           `json:"workflow_ref"`
+	WorkflowSHA       string           `json:"workflow_sha"`
+	Workspace         string           `json:"workspace"`
+	CreatedAt         time.Time        `json:"created_at"`
+	UpdateAt          time.Time        `json:"updated_at"`
 }
 
 func (s ScenarioGitHub) Type() string {
-	return ScenarioTypeGitHub.String()
+	return string(ScenarioTypeGitHub)
 }
 
 func (s ScenarioGitHub) Clone() ScenarioType {
 	return ScenarioGitHub{
-		Action:            ScenarioTypeGitHub.String(),
+		ScenarioType:      ScenarioTypeGitHub,
+		Action:            s.Action,
 		ID:                s.ID,
 		Actor:             s.Actor,
 		ActorID:           s.ActorID,
@@ -177,7 +173,7 @@ func (s ScenarioGitHub) IsZero() bool {
 		s.Job == "" &&
 		s.Ref == "" &&
 		s.RefName == "" &&
-		s.RefProtected == false &&
+		s.RefProtected == "" &&
 		s.RefType == "" &&
 		s.Repository == "" &&
 		s.RepositoryID == "" &&
@@ -207,7 +203,9 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 	m := make(map[string]any)
 
 	// Always included fields.
-	m["action"] = ScenarioTypeGitHub.String()
+	m["scenario_type"] = ScenarioTypeGitHub
+
+	m["action"] = s.Action
 	m["id"] = s.ID
 
 	m["actor"] = s.Actor
@@ -218,7 +216,7 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 
 	m["ref"] = s.Ref
 	m["ref_name"] = s.RefName
-	m["ref_protected"] = strconv.FormatBool(s.RefProtected)
+	m["ref_protected"] = s.RefProtected
 	m["ref_type"] = s.RefType
 
 	m["repository"] = s.Repository
@@ -242,8 +240,8 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 	m["workflow_sha"] = s.WorkflowSHA
 	m["workspace"] = s.Workspace
 
-	m["created_at"] = s.CreatedAt.Format(time.RFC3339)
-	m["updated_at"] = s.UpdateAt.Format(time.RFC3339)
+	m["created_at"] = s.CreatedAt.UTC().Format(time.DateTime)
+	m["updated_at"] = s.UpdateAt.UTC().Format(time.DateTime)
 
 	return m, nil
 }
@@ -251,33 +249,33 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 // Scenario HostOS.
 
 type ScenarioHostOS struct {
-	Action    string `json:"action"`
-	MachineID string `json:"machine_id"`
-	Hostname  string `json:"hostname"`
-	IP        string `json:"ip"`
-	OS        string `json:"os"`
-	Arch      string `json:"arch"`
+	ScenarioType ScenarioTypeName `json:"scenario_type"`
+	MachineID    string           `json:"machine_id"`
+	Hostname     string           `json:"hostname"`
+	IP           string           `json:"ip"`
+	OS           string           `json:"os"`
+	Arch         string           `json:"arch"`
 }
 
 func (s ScenarioHostOS) Type() string {
-	return ScenarioTypeHostOS.String()
+	return string(ScenarioTypeHostOS)
 }
 
 func (s ScenarioHostOS) Clone() ScenarioType {
 	return ScenarioHostOS{
-		Action:    s.Type(),
-		MachineID: s.MachineID,
-		Hostname:  s.Hostname,
-		IP:        s.IP,
-		OS:        s.OS,
-		Arch:      s.Arch,
+		ScenarioType: ScenarioTypeHostOS,
+		MachineID:    s.MachineID,
+		Hostname:     s.Hostname,
+		IP:           s.IP,
+		OS:           s.OS,
+		Arch:         s.Arch,
 	}
 }
 
 func (s ScenarioHostOS) IsZero() bool {
-	return s.Hostname == "" &&
+	return s.MachineID == "" &&
+		s.Hostname == "" &&
 		s.IP == "" &&
-		s.MachineID == "" &&
 		s.OS == "" &&
 		s.Arch == ""
 }
@@ -290,7 +288,7 @@ func (s ScenarioHostOS) MarshalJSONMap() (map[string]any, error) {
 	m := make(map[string]any)
 
 	// Always included fields.
-	m["action"] = ScenarioTypeHostOS.String()
+	m["scenario_type"] = string(ScenarioTypeHostOS)
 	m["machine_id"] = s.MachineID
 	m["hostname"] = s.Hostname
 	m["ip"] = s.IP
@@ -303,29 +301,32 @@ func (s ScenarioHostOS) MarshalJSONMap() (map[string]any, error) {
 // Scenario K8S.
 
 type ScenarioK8S struct {
-	Action    string `json:"action"`
-	Cluster   string `json:"cluster"`
-	Namespace string `json:"namespace"`
-	Pod       string `json:"pod"`
-	Node      string `json:"node"`
+	ScenarioType ScenarioTypeName `json:"scenario_type"`
+	Cluster      string           `json:"cluster"`
+	Namespace    string           `json:"namespace"`
+	Pod          string           `json:"pod"`
+	Node         string           `json:"node"`
 }
 
 func (s ScenarioK8S) Type() string {
-	return ScenarioTypeK8S.String()
+	return string(ScenarioTypeK8S)
 }
 
 func (s ScenarioK8S) Clone() ScenarioType {
 	return ScenarioK8S{
-		Action:    ScenarioTypeK8S.String(),
-		Cluster:   s.Cluster,
-		Namespace: s.Namespace,
-		Pod:       s.Pod,
-		Node:      s.Node,
+		ScenarioType: ScenarioTypeK8S,
+		Cluster:      s.Cluster,
+		Namespace:    s.Namespace,
+		Pod:          s.Pod,
+		Node:         s.Node,
 	}
 }
 
 func (s ScenarioK8S) IsZero() bool {
-	return s.Cluster == "" && s.Namespace == "" && s.Pod == "" && s.Node == ""
+	return s.Cluster == "" &&
+		s.Namespace == "" &&
+		s.Pod == "" &&
+		s.Node == ""
 }
 
 func (s ScenarioK8S) MarshalJSONMap() (map[string]any, error) {
@@ -336,7 +337,7 @@ func (s ScenarioK8S) MarshalJSONMap() (map[string]any, error) {
 	m := make(map[string]any)
 
 	// Always included fields.
-	m["action"] = ScenarioTypeK8S.String()
+	m["scenario_type"] = ScenarioTypeK8S
 	m["cluster"] = s.Cluster
 	m["namespace"] = s.Namespace
 	m["pod"] = s.Pod

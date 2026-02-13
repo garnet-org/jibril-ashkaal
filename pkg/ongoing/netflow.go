@@ -98,15 +98,12 @@ func (g *OnGoingNetworkFlow) SetAttenuator(attenuator Attenuator) {
 func (g *OnGoingNetworkFlow) SetScenario(scenario ScenarioType) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	switch scenario.Type() {
-	case ScenarioTypeGitHub.String():
-		g.NetworkFlow.Base.Scenarios.GitHub = scenario.(ScenarioGitHub)
-		return
-	case ScenarioTypeHostOS.String():
-		g.NetworkFlow.Base.Scenarios.HostOS = scenario.(ScenarioHostOS)
-		return
-	case ScenarioTypeK8S.String():
-		g.NetworkFlow.Base.Scenarios.K8S = scenario.(ScenarioK8S)
-		return
+	switch v := scenario.(type) {
+	case ScenarioGitHub:
+		g.NetworkFlow.Base.Scenarios.GitHub = v
+	case ScenarioHostOS:
+		g.NetworkFlow.Base.Scenarios.HostOS = v
+	case ScenarioK8S:
+		g.NetworkFlow.Base.Scenarios.K8S = v
 	}
 }

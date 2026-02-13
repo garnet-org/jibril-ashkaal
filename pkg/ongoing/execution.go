@@ -98,15 +98,12 @@ func (g *OnGoingExecution) SetAttenuator(attenuator Attenuator) {
 func (g *OnGoingExecution) SetScenario(scenario ScenarioType) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	switch scenario.Type() {
-	case ScenarioTypeGitHub.String():
-		g.Execution.Base.Scenarios.GitHub = scenario.(ScenarioGitHub)
-		return
-	case ScenarioTypeHostOS.String():
-		g.Execution.Base.Scenarios.HostOS = scenario.(ScenarioHostOS)
-		return
-	case ScenarioTypeK8S.String():
-		g.Execution.Base.Scenarios.K8S = scenario.(ScenarioK8S)
-		return
+	switch v := scenario.(type) {
+	case ScenarioGitHub:
+		g.Execution.Base.Scenarios.GitHub = v
+	case ScenarioHostOS:
+		g.Execution.Base.Scenarios.HostOS = v
+	case ScenarioK8S:
+		g.Execution.Base.Scenarios.K8S = v
 	}
 }
