@@ -30,10 +30,19 @@ type Metadata struct {
 type SeverityLevel string
 
 const (
-	SeverityNone     SeverityLevel = "none"
-	SeverityLow      SeverityLevel = "low"
-	SeverityMedium   SeverityLevel = "medium"
-	SeverityHigh     SeverityLevel = "high"
+	// SeverityNone no security impact.
+	SeverityNone SeverityLevel = "none"
+
+	// SeverityLow a minor issue with low impact, no immediate action required.
+	SeverityLow SeverityLevel = "low"
+
+	// SeverityMedium a moderate issue that could require investigation.
+	SeverityMedium SeverityLevel = "medium"
+
+	// SeverityHigh a serious issue that requires prompt action.
+	SeverityHigh SeverityLevel = "high"
+
+	// SeverityCritical a critical issue that requires an immediate response.
 	SeverityCritical SeverityLevel = "critical"
 )
 
