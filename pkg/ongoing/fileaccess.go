@@ -89,20 +89,14 @@ func (g *OnGoingFileAccess) SetScore(score Score) {
 	g.FileAccess.Base.Score = score
 }
 
-func (g *OnGoingFileAccess) GetScore() Score {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
-	return g.FileAccess.Base.Score
-}
-
 func (g *OnGoingFileAccess) SetAttenuator(attenuator Attenuator) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
 	g.FileAccess.Base.Attenuator = attenuator
 }
 
-func (g *OnGoingFileAccess) GetAttenuator() Attenuator {
-	g.mutex.RLock()
-	defer g.mutex.RUnlock()
-	return g.FileAccess.Base.Attenuator
+func (g *OnGoingFileAccess) SetScenario(scenario Scenario) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.FileAccess.Base.Scenario = scenario
 }

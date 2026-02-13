@@ -105,3 +105,9 @@ func (g *OnGoingProfile) GetAttenuator() Attenuator {
 	defer g.mutex.RUnlock()
 	return g.Profile.Base.Attenuator
 }
+
+func (g *OnGoingProfile) SetScenario(scenario Scenario) {
+	g.mutex.Lock()
+	defer g.mutex.Unlock()
+	g.Profile.Base.Scenario = scenario
+}

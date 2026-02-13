@@ -14,7 +14,7 @@ type Base struct {
 	Attenuator Attenuator `json:"attenuator"` // The attenuator of the detection.
 	Score      Score      `json:"score"`      // Detection Security Risk Score.
 	Background Background `json:"background"` // The detection context.
-	Scenario   Scenarios  `json:"scenario"`   // GitHub, Kubernetes, Host, etc.
+	Scenario   Scenario   `json:"scenario"`   // GitHub, Kubernetes, Host, etc.
 }
 
 func (b Base) Clone() Base {
@@ -102,6 +102,22 @@ func (b Base) MarshalJSONMap() (map[string]any, error) {
 		return nil, err
 	}
 	return m, nil
+}
+
+func (b Base) SetScore(score Score) {
+	b.Score = score
+}
+
+func (b Base) GetScore() Score {
+	return b.Score
+}
+
+func (b Base) SetAttenuator(attenuator Attenuator) {
+	b.Attenuator = attenuator
+}
+
+func (b Base) GetAttenuator() Attenuator {
+	return b.Attenuator
 }
 
 // Detection Event Metadata.
@@ -230,28 +246,6 @@ func (s Score) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(result)
-}
-
-// Scenarios is a slice of Scenario.
-
-type Scenarios []Scenario
-
-func (s Scenarios) Clone() Scenarios {
-	scenarios := make([]Scenario, len(s))
-	copy(scenarios, s)
-	return scenarios
-}
-
-func (s Scenarios) IsZero() bool {
-	return len(s) == 0
-}
-
-func (s Scenarios) MarshalJSON() ([]byte, error) {
-	if s.IsZero() {
-		return []byte("null"), nil
-	}
-
-	return json.Marshal([]Scenario(s))
 }
 
 // Attenuator.
