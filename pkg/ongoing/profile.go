@@ -106,8 +106,18 @@ func (g *OnGoingProfile) GetAttenuator() Attenuator {
 	return g.Profile.Base.Attenuator
 }
 
-func (g *OnGoingProfile) SetScenario(scenario Scenario) {
+func (g *OnGoingProfile) SetScenario(scenario ScenarioType) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.Profile.Base.Scenario = scenario
+	switch scenario.Type() {
+	case ScenarioTypeGitHub.String():
+		g.Profile.Base.Scenarios.GitHub = scenario.(ScenarioGitHub)
+		return
+	case ScenarioTypeHostOS.String():
+		g.Profile.Base.Scenarios.HostOS = scenario.(ScenarioHostOS)
+		return
+	case ScenarioTypeK8S.String():
+		g.Profile.Base.Scenarios.K8S = scenario.(ScenarioK8S)
+		return
+	}
 }

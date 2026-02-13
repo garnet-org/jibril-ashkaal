@@ -14,7 +14,7 @@ type Base struct {
 	Attenuator Attenuator `json:"attenuator"` // The attenuator of the detection.
 	Score      Score      `json:"score"`      // Detection Security Risk Score.
 	Background Background `json:"background"` // The detection context.
-	Scenario   Scenario   `json:"scenario"`   // GitHub, Kubernetes, Host, etc.
+	Scenarios  Scenarios  `json:"scenarios"`  // GitHub, Kubernetes, Host, etc.
 }
 
 func (b Base) Clone() Base {
@@ -26,7 +26,7 @@ func (b Base) Clone() Base {
 		Attenuator: b.Attenuator.Clone(),
 		Score:      b.Score.Clone(),
 		Background: b.Background.Clone(),
-		Scenario:   b.Scenario.Clone(),
+		Scenarios:  b.Scenarios.Clone(),
 	}
 }
 
@@ -38,7 +38,7 @@ func (b Base) IsZero() bool {
 		b.Attenuator.IsZero() &&
 		b.Score.IsZero() &&
 		b.Background.IsZero() &&
-		b.Scenario.IsZero()
+		b.Scenarios.IsZero()
 }
 
 func (b Base) MarshalJSON() ([]byte, error) {
@@ -68,23 +68,17 @@ func (b Base) MarshalJSON() ([]byte, error) {
 	if !b.Background.IsZero() {
 		result["background"] = b.Background
 	}
-	if !b.Scenario.IsZero() {
-		result["scenario"] = b.Scenario
+	if !b.Scenarios.IsZero() {
+		scenariosMap, err := b.Scenarios.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		if scenariosMap != nil {
+			result["scenarios"] = scenariosMap
+		}
 	}
 
 	return json.Marshal(result)
-}
-
-func unmarshalJSONToMap(data []byte) (map[string]any, error) {
-	var m map[string]any
-	if len(data) == 0 || string(data) == "null" {
-		return nil, nil
-	}
-	err := json.Unmarshal(data, &m)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
 }
 
 func (b Base) MarshalJSONMap() (map[string]any, error) {
@@ -92,16 +86,39 @@ func (b Base) MarshalJSONMap() (map[string]any, error) {
 		return nil, nil
 	}
 
-	bBytes, err := b.MarshalJSON()
-	if err != nil {
-		return nil, err
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["uuid"] = b.UUID
+	result["timestamp"] = b.Timestamp
+
+	// Omit empty fields.
+	if b.Note != "" {
+		result["note"] = b.Note
+	}
+	if !b.Metadata.IsZero() {
+		result["metadata"] = b.Metadata
+	}
+	if !b.Attenuator.IsZero() {
+		result["attenuator"] = b.Attenuator
+	}
+	if !b.Score.IsZero() {
+		result["score"] = b.Score
+	}
+	if !b.Background.IsZero() {
+		result["background"] = b.Background
+	}
+	if !b.Scenarios.IsZero() {
+		scenariosMap, err := b.Scenarios.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		if scenariosMap != nil {
+			result["scenarios"] = scenariosMap
+		}
 	}
 
-	m, err := unmarshalJSONToMap(bBytes)
-	if err != nil {
-		return nil, err
-	}
-	return m, nil
+	return result, nil
 }
 
 func (b Base) SetScore(score Score) {

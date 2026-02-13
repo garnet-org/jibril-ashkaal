@@ -6,9 +6,95 @@ import (
 	"time"
 )
 
-type Scenario interface {
+type ScenarioTypeNum int
+
+const (
+	ScenarioTypeGitHub ScenarioTypeNum = iota + 1
+	ScenarioTypeHostOS
+	ScenarioTypeK8S
+	ScenarioTypeNumMax
+)
+
+func (s ScenarioTypeNum) String() string {
+	switch s {
+	case ScenarioTypeGitHub:
+		return "github"
+	case ScenarioTypeHostOS:
+		return "hostos"
+	case ScenarioTypeK8S:
+		return "k8s"
+	}
+	return "unknown"
+}
+
+func (s ScenarioTypeNum) IsValid() bool {
+	return s > 0 && s < ScenarioTypeNumMax
+}
+
+type Scenarios struct {
+	GitHub ScenarioGitHub
+	HostOS ScenarioHostOS
+	K8S    ScenarioK8S
+}
+
+func (s Scenarios) Clone() Scenarios {
+	return Scenarios{
+		GitHub: s.GitHub.Clone().(ScenarioGitHub),
+		HostOS: s.HostOS.Clone().(ScenarioHostOS),
+		K8S:    s.K8S.Clone().(ScenarioK8S),
+	}
+}
+
+func (s Scenarios) IsZero() bool {
+	return s.GitHub.IsZero() &&
+		s.HostOS.IsZero() &&
+		s.K8S.IsZero()
+}
+
+func (s Scenarios) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+	return json.Marshal(s)
+}
+
+func (s Scenarios) MarshalJSONMap() (map[string]any, error) {
+	if s.IsZero() {
+		return nil, nil
+	}
+	m := make(map[string]any)
+
+	// Omit empty fields.
+	if !s.GitHub.IsZero() {
+		githubMap, err := s.GitHub.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		m["github"] = githubMap
+	}
+	if !s.HostOS.IsZero() {
+		hostosMap, err := s.HostOS.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		m["hostos"] = hostosMap
+	}
+	if !s.K8S.IsZero() {
+		k8sMap, err := s.K8S.MarshalJSONMap()
+		if err != nil {
+			return nil, err
+		}
+		m["k8s"] = k8sMap
+	}
+
+	return m, nil
+}
+
+// ScenarioType is the interface for all scenario types.
+
+type ScenarioType interface {
 	Type() string
-	Clone() Scenario
+	Clone() ScenarioType
 	IsZero() bool
 }
 
@@ -46,13 +132,13 @@ type ScenarioGitHub struct {
 }
 
 func (s ScenarioGitHub) Type() string {
-	return "github"
+	return ScenarioTypeGitHub.String()
 }
 
-func (s ScenarioGitHub) Clone() Scenario {
+func (s ScenarioGitHub) Clone() ScenarioType {
 	return ScenarioGitHub{
+		Action:            ScenarioTypeGitHub.String(),
 		ID:                s.ID,
-		Action:            s.Action,
 		Actor:             s.Actor,
 		ActorID:           s.ActorID,
 		EventName:         s.EventName,
@@ -83,22 +169,50 @@ func (s ScenarioGitHub) Clone() Scenario {
 }
 
 func (s ScenarioGitHub) IsZero() bool {
-	return s.ID == "" && s.Action == "" && s.Actor == "" && s.Repository == ""
+	return s.ID == "" &&
+		s.Action == "" &&
+		s.Actor == "" &&
+		s.ActorID == "" &&
+		s.EventName == "" &&
+		s.Job == "" &&
+		s.Ref == "" &&
+		s.RefName == "" &&
+		s.RefProtected == false &&
+		s.RefType == "" &&
+		s.Repository == "" &&
+		s.RepositoryID == "" &&
+		s.RepositoryOwner == "" &&
+		s.RepositoryOwnerID == "" &&
+		s.RunAttempt == "" &&
+		s.RunID == "" &&
+		s.RunNumber == "" &&
+		s.RunnerArch == "" &&
+		s.RunnerOS == "" &&
+		s.ServerURL == "" &&
+		s.SHA == "" &&
+		s.TriggeringActor == "" &&
+		s.Workflow == "" &&
+		s.WorkflowRef == "" &&
+		s.WorkflowSHA == "" &&
+		s.Workspace == "" &&
+		s.CreatedAt.IsZero() &&
+		s.UpdateAt.IsZero()
 }
 
-func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
+func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 	if s.IsZero() {
-		return []byte("null"), nil
+		return nil, nil
 	}
 
-	m := make(map[string]string)
+	m := make(map[string]any)
 
 	// Always included fields.
-
+	m["action"] = ScenarioTypeGitHub.String()
 	m["id"] = s.ID
-	m["action"] = s.Action
+
 	m["actor"] = s.Actor
 	m["actor_id"] = s.ActorID
+
 	m["event_name"] = s.EventName
 	m["job"] = s.Job
 
@@ -118,26 +232,26 @@ func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
 
 	m["runner_arch"] = s.RunnerArch
 	m["runner_os"] = s.RunnerOS
-	m["server_url"] = s.ServerURL
 
+	m["server_url"] = s.ServerURL
 	m["sha"] = s.SHA
 	m["triggering_actor"] = s.TriggeringActor
 
 	m["workflow"] = s.Workflow
 	m["workflow_ref"] = s.WorkflowRef
 	m["workflow_sha"] = s.WorkflowSHA
-
 	m["workspace"] = s.Workspace
 
 	m["created_at"] = s.CreatedAt.Format(time.RFC3339)
 	m["updated_at"] = s.UpdateAt.Format(time.RFC3339)
 
-	return json.Marshal(m)
+	return m, nil
 }
 
 // Scenario HostOS.
 
 type ScenarioHostOS struct {
+	Action    string `json:"action"`
 	MachineID string `json:"machine_id"`
 	Hostname  string `json:"hostname"`
 	IP        string `json:"ip"`
@@ -146,11 +260,12 @@ type ScenarioHostOS struct {
 }
 
 func (s ScenarioHostOS) Type() string {
-	return "hostos"
+	return ScenarioTypeHostOS.String()
 }
 
-func (s ScenarioHostOS) Clone() Scenario {
+func (s ScenarioHostOS) Clone() ScenarioType {
 	return ScenarioHostOS{
+		Action:    s.Type(),
 		MachineID: s.MachineID,
 		Hostname:  s.Hostname,
 		IP:        s.IP,
@@ -160,37 +275,35 @@ func (s ScenarioHostOS) Clone() Scenario {
 }
 
 func (s ScenarioHostOS) IsZero() bool {
-	return s.Hostname == "" && s.IP == "" && s.MachineID == "" && s.OS == "" && s.Arch == ""
+	return s.Hostname == "" &&
+		s.IP == "" &&
+		s.MachineID == "" &&
+		s.OS == "" &&
+		s.Arch == ""
 }
 
-func (s ScenarioHostOS) MarshalJSON() ([]byte, error) {
+func (s ScenarioHostOS) MarshalJSONMap() (map[string]any, error) {
 	if s.IsZero() {
-		return []byte("null"), nil
+		return nil, nil
 	}
 
-	m := make(map[string]string)
+	m := make(map[string]any)
 
 	// Always included fields.
+	m["action"] = ScenarioTypeHostOS.String()
 	m["machine_id"] = s.MachineID
 	m["hostname"] = s.Hostname
+	m["ip"] = s.IP
+	m["os"] = s.OS
+	m["arch"] = s.Arch
 
-	// Omit empty fields.
-	if s.IP != "" {
-		m["ip"] = s.IP
-	}
-	if s.OS != "" {
-		m["os"] = s.OS
-	}
-	if s.Arch != "" {
-		m["arch"] = s.Arch
-	}
-
-	return json.Marshal(m)
+	return m, nil
 }
 
 // Scenario K8S.
 
 type ScenarioK8S struct {
+	Action    string `json:"action"`
 	Cluster   string `json:"cluster"`
 	Namespace string `json:"namespace"`
 	Pod       string `json:"pod"`
@@ -198,11 +311,12 @@ type ScenarioK8S struct {
 }
 
 func (s ScenarioK8S) Type() string {
-	return "k8s"
+	return ScenarioTypeK8S.String()
 }
 
-func (s ScenarioK8S) Clone() Scenario {
+func (s ScenarioK8S) Clone() ScenarioType {
 	return ScenarioK8S{
+		Action:    ScenarioTypeK8S.String(),
 		Cluster:   s.Cluster,
 		Namespace: s.Namespace,
 		Pod:       s.Pod,
@@ -214,18 +328,19 @@ func (s ScenarioK8S) IsZero() bool {
 	return s.Cluster == "" && s.Namespace == "" && s.Pod == "" && s.Node == ""
 }
 
-func (s ScenarioK8S) MarshalJSON() ([]byte, error) {
+func (s ScenarioK8S) MarshalJSONMap() (map[string]any, error) {
 	if s.IsZero() {
-		return []byte("null"), nil
+		return nil, nil
 	}
 
-	m := make(map[string]string)
+	m := make(map[string]any)
 
 	// Always included fields.
+	m["action"] = ScenarioTypeK8S.String()
 	m["cluster"] = s.Cluster
 	m["namespace"] = s.Namespace
 	m["pod"] = s.Pod
 	m["node"] = s.Node
 
-	return json.Marshal(m)
+	return m, nil
 }

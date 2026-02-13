@@ -95,8 +95,15 @@ func (g *OnGoingDropIP) SetAttenuator(attenuator Attenuator) {
 	g.DropIP.Base.Attenuator = attenuator
 }
 
-func (g *OnGoingDropIP) SetScenario(scenario Scenario) {
+func (g *OnGoingDropIP) SetScenario(scenario ScenarioType) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.DropIP.Base.Scenario = scenario
+	switch scenario.Type() {
+	case "github":
+		g.DropIP.Base.Scenarios.GitHub = scenario.(ScenarioGitHub)
+	case "k8s":
+		g.DropIP.Base.Scenarios.K8S = scenario.(ScenarioK8S)
+	case "hostos":
+		g.DropIP.Base.Scenarios.HostOS = scenario.(ScenarioHostOS)
+	}
 }

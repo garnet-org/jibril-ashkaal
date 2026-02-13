@@ -95,8 +95,18 @@ func (g *OnGoingFileAccess) SetAttenuator(attenuator Attenuator) {
 	g.FileAccess.Base.Attenuator = attenuator
 }
 
-func (g *OnGoingFileAccess) SetScenario(scenario Scenario) {
+func (g *OnGoingFileAccess) SetScenario(scenario ScenarioType) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.FileAccess.Base.Scenario = scenario
+	switch scenario.Type() {
+	case ScenarioTypeGitHub.String():
+		g.FileAccess.Base.Scenarios.GitHub = scenario.(ScenarioGitHub)
+		return
+	case ScenarioTypeHostOS.String():
+		g.FileAccess.Base.Scenarios.HostOS = scenario.(ScenarioHostOS)
+		return
+	case ScenarioTypeK8S.String():
+		g.FileAccess.Base.Scenarios.K8S = scenario.(ScenarioK8S)
+		return
+	}
 }

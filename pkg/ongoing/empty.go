@@ -29,4 +29,4 @@ func (*OnGoingEmpty) SetScore(score Score) {}
 
 func (*OnGoingEmpty) SetAttenuator(attenuator Attenuator) {}
 
-func (*OnGoingEmpty) SetScenario(scenarios Scenario) {}
+func (*OnGoingEmpty) SetScenario(scenarios ScenarioType) {}

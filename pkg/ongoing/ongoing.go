@@ -16,5 +16,5 @@ type OnGoing interface {
 
 	SetScore(score Score)
 	SetAttenuator(attenuator Attenuator)
-	SetScenario(scenario Scenario)
+	SetScenario(scenario ScenarioType)
 }

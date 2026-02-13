@@ -95,8 +95,18 @@ func (g *OnGoingNetworkPeer) SetAttenuator(attenuator Attenuator) {
 	g.NetworkPeer.Base.Attenuator = attenuator
 }
 
-func (g *OnGoingNetworkPeer) SetScenario(scenario Scenario) {
+func (g *OnGoingNetworkPeer) SetScenario(scenario ScenarioType) {
 	g.mutex.Lock()
 	defer g.mutex.Unlock()
-	g.NetworkPeer.Base.Scenario = scenario
+	switch scenario.Type() {
+	case ScenarioTypeGitHub.String():
+		g.NetworkPeer.Base.Scenarios.GitHub = scenario.(ScenarioGitHub)
+		return
+	case ScenarioTypeHostOS.String():
+		g.NetworkPeer.Base.Scenarios.HostOS = scenario.(ScenarioHostOS)
+		return
+	case ScenarioTypeK8S.String():
+		g.NetworkPeer.Base.Scenarios.K8S = scenario.(ScenarioK8S)
+		return
+	}
 }
