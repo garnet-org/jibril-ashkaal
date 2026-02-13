@@ -1062,11 +1062,11 @@ func (f FileAggregate) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
-	return json.Marshal(f.Root)
+	type Alias FileAggregate
+	return json.Marshal(Alias(f))
 }
 
 // FSDir.
-
 type FSDir struct {
 	Path  string   `json:"path"`  // Absolute path of the directory.
 	Base  string   `json:"base"`  // Base name of the directory.
