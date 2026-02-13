@@ -204,7 +204,7 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 type Score struct {
 	Source        string  `json:"source"`         // Source of the score.
 	Severity      int     `json:"severity"`       // Severity number of the detection (0-100).
-	SeverityLevel string  `json:"severity_level"` // Severity level of the detection (low, medium, high, critical).
+	SeverityLevel string  `json:"severity_level"` // Severity level of the detection (none, low, medium, high, critical).
 	Confidence    float64 `json:"confidence"`     // Confidence percentage of the detection (0.0-1.0).
 	RiskScore     float64 `json:"risk_score"`     // Calculated and rounded up risk score of the detection (0.0-100.0).
 	Reason        string  `json:"reason"`         // Detailed Reason of why this score.
@@ -221,6 +221,8 @@ func (s Score) Clone() Score {
 	}
 }
 
+// IsZero checks if Score is empty.
+// Returns true if all fields have zero values.
 func (s Score) IsZero() bool {
 	return s.Source == "" &&
 		s.Severity == 0 &&
@@ -230,6 +232,18 @@ func (s Score) IsZero() bool {
 		s.Reason == ""
 }
 
+// MarshalJSON implements json.Marshaler.
+//
+// MarshalJSON ensures that an empty Score is serialized
+// as null. All valid severity levels including "none" are
+// properly serialized to their corresponding string values.
+// SeverityLevel should not be empty.
+//
+// RiskScore must be calculated if severity_level != "none".
+// When RiskScore is zero, it is omitted from JSON. This includes
+// the case where severity_level == "none", meaning no security impact.
+//
+// Always check severity and severity_level before risk_score.
 func (s Score) MarshalJSON() ([]byte, error) {
 	if s.IsZero() {
 		return []byte("null"), nil
@@ -243,7 +257,10 @@ func (s Score) MarshalJSON() ([]byte, error) {
 	result["severity_level"] = s.SeverityLevel
 	result["confidence"] = s.Confidence
 
-	// Omit empty fields.
+	// RiskScore must be calculated if severity_level != "none".
+	// if severity_level == "none" then it probably means no
+	// security impact, so no risk. In this case risk_score is not
+	// serialized.
 	if s.RiskScore != 0 {
 		result["risk_score"] = s.RiskScore
 	}
