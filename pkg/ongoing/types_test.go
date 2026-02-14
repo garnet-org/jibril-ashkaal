@@ -315,22 +315,18 @@ func TestProfile(t *testing.T) {
 						RemoteAddress: "93.184.216.34",
 						RemoteName:    "example.com",
 						RemoteNames:   []string{"example.com", "www.example.com"},
-						UsedPorts: []PortCommAgg{
+						Ports: []PairPort{
 							{
-								SrcPort: 50432,
-								DstPort: 443,
-								Phase: Phase{
-									Direction:  "egress",
-									InitatedBy: "local",
-									Status:     "completed",
-									EndedBy:    "remote",
-								},
+								Local:  50432,
+								Remote: 443,
+							},
+							{
+								Local:  50433,
+								Remote: 80,
 							},
 						},
-						Status:   "allowed",
-						Reason:   "policy-allowlist",
-						Process:  "/usr/bin/runner",
-						Ancestry: []string{"/usr/bin/containerd", "/usr/bin/runner"},
+						Status: "allowed",
+						Reason: "policy-allowlist",
 					},
 				},
 				SeenDomains: []string{"example.com", "registry.npmjs.org"},
@@ -339,33 +335,41 @@ func TestProfile(t *testing.T) {
 		Assertions: []Assertion{
 			{
 				ID:        "assert-1",
-				EventKind: "network",
+				Mechanism: "network",
 				Result:    "suspicious",
 				Details:   "New outbound domain observed during build",
 				Evidence: []Evidence{
 					{
-						Timestamp:   "2026-02-12T10:14:45Z",
-						EventKind:   "egress",
-						Domain:      "example.com",
-						PeerName:    "example.com",
-						PeerAddress: "93.184.216.34",
-						Process:     "/usr/bin/runner",
-						Ancestry:    []string{"/usr/bin/containerd", "/usr/bin/runner"},
-					},
-					{
-						Timestamp:   "2026-02-12T10:14:46Z",
-						EventKind:   "dns",
-						Domain:      "example.com",
-						PeerName:    "dns-resolver",
-						PeerAddress: "10.0.0.2",
-						Process:     "/usr/bin/runner",
-						Ancestry:    []string{"/usr/bin/containerd", "/usr/bin/runner"},
+						Timestamp: "2026-02-12T10:14:45Z",
+						EventKind: "network_peers",
+						EventName: "network_peers_01",
+						Peer: Peer{
+							Status:        "allowed",
+							Reason:        "policy-allowlist",
+							Protocol:      "tcp",
+							LocalAddress:  "10.0.0.5",
+							LocalName:     "build-agent",
+							LocalNames:    []string{"build-agent.local"},
+							RemoteAddress: "93.184.216.34",
+							RemoteName:    "example.com",
+							RemoteNames:   []string{"example.com", "www.example.com"},
+							Ports: []PairPort{
+								{Local: 50432, Remote: 443},
+								{Local: 50433, Remote: 80},
+							},
+							Tree: []ProcessTree{
+								{
+									Process:  "runner",
+									Ancestry: []string{"/usr/bin/containerd", "/usr/bin/runner"},
+								},
+							},
+						},
 					},
 				},
 			},
 		},
 		Telemetry: Telemetry{
-			NetTelemetry: NetTelemetry{
+			Network: NetTelemetry{
 				EgressTotalDomains:     12,
 				EgressTotalConnections: 42,
 			},
