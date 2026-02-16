@@ -2,6 +2,8 @@ package ongoing
 
 import (
 	"encoding/json"
+	"fmt"
+	"strings"
 )
 
 // All detection events have these fields.
@@ -1956,9 +1958,112 @@ func (c Container) MarshalJSON() ([]byte, error) {
 // Profiling event.
 //
 
+// ProcessTree.
+
+type ProcessTree struct {
+	Process  string   `json:"process"`
+	Ancestry []string `json:"ancestry"`
+}
+
+func (pt ProcessTree) Clone() ProcessTree {
+	return ProcessTree{
+		Process:  pt.Process,
+		Ancestry: pt.Ancestry,
+	}
+}
+
+func (pt ProcessTree) IsZero() bool {
+	return pt.Process == "" &&
+		len(pt.Ancestry) == 0
+}
+
+func (pt ProcessTree) MarshalJSON() ([]byte, error) {
+	if pt.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if pt.Process != "" {
+		result["process"] = pt.Process
+	}
+	if len(pt.Ancestry) > 0 {
+		result["ancestry"] = pt.Ancestry
+	}
+
+	return json.Marshal(result)
+}
+
+func (pt ProcessTree) String() string {
+	if pt.IsZero() {
+		return ""
+	}
+	ancestry := pt.StringSlice()
+	return strings.Join(ancestry, "|")
+}
+
+func (pt ProcessTree) StringSlice() []string {
+	if pt.IsZero() {
+		return []string{}
+	}
+	ancestry := make([]string, 0, len(pt.Ancestry))
+	for _, p := range pt.Ancestry {
+		if p == "" {
+			continue
+		}
+		ancestry = append(ancestry, p)
+	}
+	return ancestry
+}
+
+// PairPort: A pair of ports.
+
+type PairPort struct {
+	Local  int `json:"local_port"`
+	Remote int `json:"remote_port"`
+}
+
+func (p PairPort) Clone() PairPort {
+	return PairPort{
+		Local:  p.Local,
+		Remote: p.Remote,
+	}
+}
+
+func (p PairPort) IsZero() bool {
+	return p.Local == 0 &&
+		p.Remote == 0
+}
+
+func (p PairPort) MarshalJSON() ([]byte, error) {
+	if p.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if p.Local != 0 {
+		result["local_port"] = p.Local
+	}
+	if p.Remote != 0 {
+		result["remote_port"] = p.Remote
+	}
+
+	return json.Marshal(result)
+}
+
+func (p PairPort) String() string {
+	if p.IsZero() {
+		return ""
+	}
+	return fmt.Sprintf("%d-%d", p.Local, p.Remote)
+}
+
 // Egress Peer: A single remote peer that supports the egress profile.
 
 type Peer struct {
+	Status        string        `json:"status"`
+	Reason        string        `json:"reason"`
 	Protocol      string        `json:"protocol"`
 	LocalAddress  string        `json:"local_address"`
 	LocalName     string        `json:"local_name"`
@@ -1966,17 +2071,18 @@ type Peer struct {
 	RemoteAddress string        `json:"remote_address"`
 	RemoteName    string        `json:"remote_name"`
 	RemoteNames   []string      `json:"remote_names"`
-	UsedPorts     []PortCommAgg `json:"used_ports"`
-	Status        string        `json:"status"`
-	Reason        string        `json:"reason"`
-	Process       string        `json:"process"`
-	Ancestry      []string      `json:"ancestry"`
+	Ports         []PairPort    `json:"ports"`
+	Tree          []ProcessTree `json:"process_tree"`
 }
 
 func (ep Peer) Clone() Peer {
-	ancestry := make([]string, len(ep.Ancestry))
-	copy(ancestry, ep.Ancestry)
+	processTrees := make([]ProcessTree, len(ep.Tree))
+	for i, tree := range ep.Tree {
+		processTrees[i] = tree.Clone()
+	}
 	return Peer{
+		Status:        ep.Status,
+		Reason:        ep.Reason,
 		Protocol:      ep.Protocol,
 		LocalAddress:  ep.LocalAddress,
 		LocalName:     ep.LocalName,
@@ -1984,11 +2090,8 @@ func (ep Peer) Clone() Peer {
 		RemoteAddress: ep.RemoteAddress,
 		RemoteName:    ep.RemoteName,
 		RemoteNames:   ep.RemoteNames,
-		UsedPorts:     ep.UsedPorts,
-		Status:        ep.Status,
-		Reason:        ep.Reason,
-		Process:       ep.Process,
-		Ancestry:      ancestry,
+		Ports:         ep.Ports,
+		Tree:          processTrees,
 	}
 }
 
@@ -2002,9 +2105,8 @@ func (ep Peer) IsZero() bool {
 		ep.RemoteAddress == "" &&
 		ep.Status == "" &&
 		ep.Reason == "" &&
-		ep.Process == "" &&
-		len(ep.Ancestry) == 0 &&
-		len(ep.UsedPorts) == 0
+		len(ep.Ports) == 0 &&
+		len(ep.Tree) == 0
 }
 
 func (ep Peer) MarshalJSON() ([]byte, error) {
@@ -2020,6 +2122,12 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 	result["local_address"] = ep.LocalAddress
 
 	// Omit empty fields.
+	if ep.Status != "" {
+		result["status"] = ep.Status
+	}
+	if ep.Reason != "" {
+		result["reason"] = ep.Reason
+	}
 	if ep.RemoteName != "" {
 		result["remote_name"] = ep.RemoteName
 	}
@@ -2032,23 +2140,22 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 	if len(ep.RemoteNames) > 0 {
 		result["remote_names"] = ep.RemoteNames
 	}
-	if len(ep.UsedPorts) > 0 {
-		result["used_ports"] = ep.UsedPorts
+	if len(ep.Ports) > 0 {
+		result["ports"] = ep.Ports
 	}
-	if ep.Status != "" {
-		result["status"] = ep.Status
-	}
-	if ep.Reason != "" {
-		result["reason"] = ep.Reason
-	}
-	if ep.Process != "" {
-		result["process"] = ep.Process
-	}
-	if len(ep.Ancestry) > 0 {
-		result["ancestry"] = ep.Ancestry
+	if len(ep.Tree) > 0 {
+		result["process_tree"] = ep.Tree
 	}
 
 	return json.Marshal(result)
+}
+
+func (ep Peer) String() string {
+	return strings.Join([]string{
+		ep.Protocol,
+		ep.LocalAddress,
+		ep.RemoteAddress,
+	}, "|")
 }
 
 // Egress: A collection of egress traffic that supports the profile.
@@ -2158,17 +2265,17 @@ func (nt NetTelemetry) MarshalJSON() ([]byte, error) {
 // Telemetry: A collection of telemetry data that supports the profile.
 
 type Telemetry struct {
-	NetTelemetry NetTelemetry `json:"network_telemetry"`
+	Network NetTelemetry `json:"network"`
 }
 
 func (t Telemetry) Clone() Telemetry {
 	return Telemetry{
-		NetTelemetry: t.NetTelemetry.Clone(),
+		Network: t.Network.Clone(),
 	}
 }
 
 func (t Telemetry) IsZero() bool {
-	return t.NetTelemetry.IsZero()
+	return t.Network.IsZero()
 }
 
 func (t Telemetry) MarshalJSON() ([]byte, error) {
@@ -2179,7 +2286,7 @@ func (t Telemetry) MarshalJSON() ([]byte, error) {
 	result := make(map[string]any)
 
 	// Always included field.
-	result["network_telemetry"] = t.NetTelemetry
+	result["network"] = t.Network
 
 	return json.Marshal(result)
 }
@@ -2187,37 +2294,23 @@ func (t Telemetry) MarshalJSON() ([]byte, error) {
 // Evidence: A single piece of evidence that supports an assertion.
 
 type Evidence struct {
-	Timestamp   string   `json:"timestamp"`
-	EventKind   string   `json:"event_kind"`
-	Domain      string   `json:"domain"`
-	PeerName    string   `json:"peer_name"`
-	PeerAddress string   `json:"peer_address"`
-	Process     string   `json:"process"`
-	Ancestry    []string `json:"ancestry"`
+	Timestamp string `json:"timestamp"`  // Event timestamp.
+	EventName string `json:"event_name"` // Event name.
+	Peer      Peer   `json:"peer"`       // Peer.
 }
 
 func (e Evidence) Clone() Evidence {
-	ancestry := make([]string, len(e.Ancestry))
-	copy(ancestry, e.Ancestry)
 	return Evidence{
-		Timestamp:   e.Timestamp,
-		EventKind:   e.EventKind,
-		Domain:      e.Domain,
-		PeerName:    e.PeerName,
-		PeerAddress: e.PeerAddress,
-		Process:     e.Process,
-		Ancestry:    ancestry,
+		Timestamp: e.Timestamp,
+		EventName: e.EventName,
+		Peer:      e.Peer.Clone(),
 	}
 }
 
 func (e Evidence) IsZero() bool {
 	return e.Timestamp == "" &&
-		e.EventKind == "" &&
-		e.Domain == "" &&
-		e.PeerName == "" &&
-		e.PeerAddress == "" &&
-		e.Process == "" &&
-		len(e.Ancestry) == 0
+		e.EventName == "" &&
+		e.Peer.IsZero()
 }
 
 func (e Evidence) MarshalJSON() ([]byte, error) {
@@ -2229,23 +2322,11 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 
 	// Always included fields.
 	result["timestamp"] = e.Timestamp
-	result["event_kind"] = e.EventKind
+	result["event_name"] = e.EventName
 
 	// Omit empty fields.
-	if e.Domain != "" {
-		result["domain"] = e.Domain
-	}
-	if e.PeerName != "" {
-		result["peer_name"] = e.PeerName
-	}
-	if e.PeerAddress != "" {
-		result["peer_address"] = e.PeerAddress
-	}
-	if e.Process != "" {
-		result["process"] = e.Process
-	}
-	if len(e.Ancestry) > 0 {
-		result["ancestry"] = e.Ancestry
+	if !e.Peer.IsZero() {
+		result["peer"] = e.Peer
 	}
 
 	return json.Marshal(result)
@@ -2254,11 +2335,11 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 // Assertion: A list of evidence that supports the assertion.
 
 type Assertion struct {
-	ID        string     `json:"id"`
-	EventKind string     `json:"event_kind"`
-	Result    string     `json:"result"`
-	Details   string     `json:"details"`
-	Evidence  []Evidence `json:"evidence"`
+	ID        string     `json:"id"`        // Detection kind.
+	Mechanism string     `json:"mechanism"` // Detection mechanism.
+	Result    string     `json:"result"`    // Suspicious ?
+	Details   string     `json:"details"`   // Note added to the assertion.
+	Evidence  []Evidence `json:"evidence"`  // Related detection events.
 }
 
 func (a Assertion) Clone() Assertion {
@@ -2268,7 +2349,7 @@ func (a Assertion) Clone() Assertion {
 	}
 	return Assertion{
 		ID:        a.ID,
-		EventKind: a.EventKind,
+		Mechanism: a.Mechanism,
 		Result:    a.Result,
 		Details:   a.Details,
 		Evidence:  evidence,
@@ -2277,7 +2358,7 @@ func (a Assertion) Clone() Assertion {
 
 func (a Assertion) IsZero() bool {
 	return a.ID == "" &&
-		a.EventKind == "" &&
+		a.Mechanism == "" &&
 		a.Result == "" &&
 		a.Details == "" &&
 		len(a.Evidence) == 0
@@ -2292,7 +2373,7 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 
 	// Always included fields.
 	result["id"] = a.ID
-	result["event_kind"] = a.EventKind
+	result["mechanism"] = a.Mechanism
 
 	// Omit empty fields.
 	if a.Result != "" {
