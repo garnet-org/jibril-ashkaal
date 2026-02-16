@@ -2,7 +2,6 @@ package ongoing
 
 import (
 	"encoding/json"
-	"fmt"
 	"strings"
 )
 
@@ -2016,49 +2015,6 @@ func (pt ProcessTree) StringSlice() []string {
 	return ancestry
 }
 
-// PairPort: A pair of ports.
-
-type PairPort struct {
-	Local  int `json:"local_port"`
-	Remote int `json:"remote_port"`
-}
-
-func (p PairPort) Clone() PairPort {
-	return PairPort{
-		Local:  p.Local,
-		Remote: p.Remote,
-	}
-}
-
-func (p PairPort) IsZero() bool {
-	return p.Local == 0 &&
-		p.Remote == 0
-}
-
-func (p PairPort) MarshalJSON() ([]byte, error) {
-	if p.IsZero() {
-		return []byte("null"), nil
-	}
-
-	result := make(map[string]any)
-
-	if p.Local != 0 {
-		result["local_port"] = p.Local
-	}
-	if p.Remote != 0 {
-		result["remote_port"] = p.Remote
-	}
-
-	return json.Marshal(result)
-}
-
-func (p PairPort) String() string {
-	if p.IsZero() {
-		return ""
-	}
-	return fmt.Sprintf("%d-%d", p.Local, p.Remote)
-}
-
 // Egress Peer: A single remote peer that supports the egress profile.
 
 type Peer struct {
@@ -2071,13 +2027,13 @@ type Peer struct {
 	RemoteAddress string        `json:"remote_address"`
 	RemoteName    string        `json:"remote_name"`
 	RemoteNames   []string      `json:"remote_names"`
-	Ports         []PairPort    `json:"ports"`
-	Tree          []ProcessTree `json:"process_tree"`
+	RemotePorts   []string      `json:"remote_ports"`
+	ProcTrees     []ProcessTree `json:"proc_trees"`
 }
 
 func (ep Peer) Clone() Peer {
-	processTrees := make([]ProcessTree, len(ep.Tree))
-	for i, tree := range ep.Tree {
+	processTrees := make([]ProcessTree, len(ep.ProcTrees))
+	for i, tree := range ep.ProcTrees {
 		processTrees[i] = tree.Clone()
 	}
 	return Peer{
@@ -2090,8 +2046,8 @@ func (ep Peer) Clone() Peer {
 		RemoteAddress: ep.RemoteAddress,
 		RemoteName:    ep.RemoteName,
 		RemoteNames:   ep.RemoteNames,
-		Ports:         ep.Ports,
-		Tree:          processTrees,
+		RemotePorts:   ep.RemotePorts,
+		ProcTrees:     processTrees,
 	}
 }
 
@@ -2105,8 +2061,8 @@ func (ep Peer) IsZero() bool {
 		ep.RemoteAddress == "" &&
 		ep.Status == "" &&
 		ep.Reason == "" &&
-		len(ep.Ports) == 0 &&
-		len(ep.Tree) == 0
+		len(ep.RemotePorts) == 0 &&
+		len(ep.ProcTrees) == 0
 }
 
 func (ep Peer) MarshalJSON() ([]byte, error) {
@@ -2140,11 +2096,11 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 	if len(ep.RemoteNames) > 0 {
 		result["remote_names"] = ep.RemoteNames
 	}
-	if len(ep.Ports) > 0 {
-		result["ports"] = ep.Ports
+	if len(ep.RemotePorts) > 0 {
+		result["ports"] = ep.RemotePorts
 	}
-	if len(ep.Tree) > 0 {
-		result["process_tree"] = ep.Tree
+	if len(ep.ProcTrees) > 0 {
+		result["process_tree"] = ep.ProcTrees
 	}
 
 	return json.Marshal(result)
