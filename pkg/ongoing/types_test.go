@@ -363,16 +363,26 @@ func TestProfile(t *testing.T) {
 			},
 		},
 		Network: NetProfile{
-			Egress: Egress{
-				Peers:       nil,
-				SeenDomains: []string{"example.com", "registry.npmjs.org"},
+			Egress: Direction{
+				Peers:   nil,
+				Domains: []string{"example.com", "registry.npmjs.org"},
 			},
 		},
 		Assertions: nil,
 		Telemetry: Telemetry{
 			Network: NetTelemetry{
-				EgressTotalDomains:     12,
-				EgressTotalConnections: 42,
+				Egress: DirectionNetTelemetry{
+					TotalDomains:     5,
+					TotalConnections: 20,
+				},
+				Ingress: DirectionNetTelemetry{
+					TotalDomains:     8,
+					TotalConnections: 10,
+				},
+				Local: DirectionNetTelemetry{
+					TotalDomains:     3,
+					TotalConnections: 15,
+				},
 			},
 		},
 	}

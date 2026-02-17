@@ -2038,16 +2038,13 @@ func (pt ProcessTree) StringSlice() []string {
 // Egress Peer: A single remote peer that supports the egress profile.
 
 type Peer struct {
-	Status        string        `json:"status"`
-	Reason        string        `json:"reason"`
 	Protocol      string        `json:"protocol"`
 	LocalAddress  string        `json:"local_address"`
-	LocalName     string        `json:"local_name"`
-	LocalNames    []string      `json:"local_names"`
 	RemoteAddress string        `json:"remote_address"`
-	RemoteName    string        `json:"remote_name"`
+	LocalNames    []string      `json:"local_names"`
 	RemoteNames   []string      `json:"remote_names"`
 	RemotePorts   []string      `json:"remote_ports"`
+	Detections    []string      `json:"detections"`
 	ProcTrees     []ProcessTree `json:"proc_trees"`
 }
 
@@ -2057,31 +2054,25 @@ func (ep Peer) Clone() Peer {
 		processTrees[i] = tree.Clone()
 	}
 	return Peer{
-		Status:        ep.Status,
-		Reason:        ep.Reason,
 		Protocol:      ep.Protocol,
 		LocalAddress:  ep.LocalAddress,
-		LocalName:     ep.LocalName,
 		LocalNames:    append([]string(nil), ep.LocalNames...),
 		RemoteAddress: ep.RemoteAddress,
-		RemoteName:    ep.RemoteName,
 		RemoteNames:   append([]string(nil), ep.RemoteNames...),
 		RemotePorts:   append([]string(nil), ep.RemotePorts...),
+		Detections:    append([]string(nil), ep.Detections...),
 		ProcTrees:     processTrees,
 	}
 }
 
 func (ep Peer) IsZero() bool {
 	return ep.Protocol == "" &&
-		ep.LocalName == "" &&
 		ep.LocalAddress == "" &&
-		ep.RemoteName == "" &&
+		ep.RemoteAddress == "" &&
 		len(ep.LocalNames) == 0 &&
 		len(ep.RemoteNames) == 0 &&
-		ep.RemoteAddress == "" &&
-		ep.Status == "" &&
-		ep.Reason == "" &&
 		len(ep.RemotePorts) == 0 &&
+		len(ep.Detections) == 0 &&
 		len(ep.ProcTrees) == 0
 }
 
@@ -2094,22 +2085,10 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 
 	// Always included fields.
 	result["protocol"] = ep.Protocol
-	result["local_name"] = ep.LocalName
 	result["local_address"] = ep.LocalAddress
+	result["remote_address"] = ep.RemoteAddress
 
 	// Omit empty fields.
-	if ep.Status != "" {
-		result["status"] = ep.Status
-	}
-	if ep.Reason != "" {
-		result["reason"] = ep.Reason
-	}
-	if ep.RemoteName != "" {
-		result["remote_name"] = ep.RemoteName
-	}
-	if ep.RemoteAddress != "" {
-		result["remote_address"] = ep.RemoteAddress
-	}
 	if len(ep.LocalNames) > 0 {
 		result["local_names"] = ep.LocalNames
 	}
@@ -2119,8 +2098,11 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 	if len(ep.RemotePorts) > 0 {
 		result["ports"] = ep.RemotePorts
 	}
+	if len(ep.Detections) > 0 {
+		result["detections"] = ep.Detections
+	}
 	if len(ep.ProcTrees) > 0 {
-		result["process_tree"] = ep.ProcTrees
+		result["proc_trees"] = ep.ProcTrees
 	}
 
 	return json.Marshal(result)
@@ -2134,30 +2116,30 @@ func (ep Peer) String() string {
 	}, "|")
 }
 
-// Egress: A collection of egress traffic that supports the profile.
+// Direction: Ingress, Egress or Local traffic.
 
-type Egress struct {
-	Peers       []Peer   `json:"peers"`
-	SeenDomains []string `json:"seen_domains"`
+type Direction struct {
+	Peers   []Peer   `json:"peers"`
+	Domains []string `json:"domains"`
 }
 
-func (e Egress) Clone() Egress {
+func (e Direction) Clone() Direction {
 	peers := make([]Peer, len(e.Peers))
 	for i, ep := range e.Peers {
 		peers[i] = ep.Clone()
 	}
-	return Egress{
-		Peers:       peers,
-		SeenDomains: append([]string(nil), e.SeenDomains...),
+	return Direction{
+		Peers:   peers,
+		Domains: append([]string(nil), e.Domains...),
 	}
 }
 
-func (e Egress) IsZero() bool {
+func (e Direction) IsZero() bool {
 	return len(e.Peers) == 0 &&
-		len(e.SeenDomains) == 0
+		len(e.Domains) == 0
 }
 
-func (e Egress) MarshalJSON() ([]byte, error) {
+func (e Direction) MarshalJSON() ([]byte, error) {
 	if e.IsZero() {
 		return []byte("null"), nil
 	}
@@ -2168,8 +2150,8 @@ func (e Egress) MarshalJSON() ([]byte, error) {
 	if len(e.Peers) > 0 {
 		result["peers"] = e.Peers
 	}
-	if len(e.SeenDomains) > 0 {
-		result["seen_domains"] = e.SeenDomains
+	if len(e.Domains) > 0 {
+		result["domains"] = e.Domains
 	}
 
 	return json.Marshal(result)
@@ -2178,17 +2160,23 @@ func (e Egress) MarshalJSON() ([]byte, error) {
 // NetProfile: A collection of network telemetry that supports the profile.
 
 type NetProfile struct {
-	Egress Egress `json:"egress"`
+	Egress  Direction `json:"egress"`
+	Ingress Direction `json:"ingress"`
+	Local   Direction `json:"local"`
 }
 
 func (np NetProfile) Clone() NetProfile {
 	return NetProfile{
-		Egress: np.Egress.Clone(),
+		Egress:  np.Egress.Clone(),
+		Ingress: np.Ingress.Clone(),
+		Local:   np.Local.Clone(),
 	}
 }
 
 func (np NetProfile) IsZero() bool {
-	return np.Egress.IsZero()
+	return np.Egress.IsZero() &&
+		np.Ingress.IsZero() &&
+		np.Local.IsZero()
 }
 
 func (np NetProfile) MarshalJSON() ([]byte, error) {
@@ -2199,7 +2187,47 @@ func (np NetProfile) MarshalJSON() ([]byte, error) {
 	result := make(map[string]any)
 
 	// Always included field.
-	result["egress"] = np.Egress
+	if !np.Egress.IsZero() {
+		result["egress"] = np.Egress
+	}
+	if !np.Ingress.IsZero() {
+		result["ingress"] = np.Ingress
+	}
+	if !np.Local.IsZero() {
+		result["local"] = np.Local
+	}
+
+	return json.Marshal(result)
+}
+
+// DirectionNetTelemetry: Summary of network telemetry for a direction.
+
+type DirectionNetTelemetry struct {
+	TotalDomains     uint `json:"total_domains"`
+	TotalConnections uint `json:"total_connections"`
+}
+
+func (int DirectionNetTelemetry) Clone() DirectionNetTelemetry {
+	return DirectionNetTelemetry{
+		TotalDomains:     int.TotalDomains,
+		TotalConnections: int.TotalConnections,
+	}
+}
+
+func (int DirectionNetTelemetry) IsZero() bool {
+	return int.TotalDomains == 0 && int.TotalConnections == 0
+}
+
+func (int DirectionNetTelemetry) MarshalJSON() ([]byte, error) {
+	if int.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	// Always included fields.
+	result["total_domains"] = int.TotalDomains
+	result["total_connections"] = int.TotalConnections
 
 	return json.Marshal(result)
 }
@@ -2207,19 +2235,21 @@ func (np NetProfile) MarshalJSON() ([]byte, error) {
 // NetTelemetry: Summary of network telemetry for the profile.
 
 type NetTelemetry struct {
-	EgressTotalDomains     uint `json:"egress_total_domains"`
-	EgressTotalConnections uint `json:"egress_total_connections"`
+	Egress  DirectionNetTelemetry `json:"egress"`
+	Ingress DirectionNetTelemetry `json:"ingress"`
+	Local   DirectionNetTelemetry `json:"local"`
 }
 
 func (nt NetTelemetry) Clone() NetTelemetry {
 	return NetTelemetry{
-		EgressTotalDomains:     nt.EgressTotalDomains,
-		EgressTotalConnections: nt.EgressTotalConnections,
+		Egress:  nt.Egress.Clone(),
+		Ingress: nt.Ingress.Clone(),
+		Local:   nt.Local.Clone(),
 	}
 }
 
 func (nt NetTelemetry) IsZero() bool {
-	return nt.EgressTotalDomains == 0 && nt.EgressTotalConnections == 0
+	return nt.Egress.IsZero() && nt.Ingress.IsZero() && nt.Local.IsZero()
 }
 
 func (nt NetTelemetry) MarshalJSON() ([]byte, error) {
@@ -2230,8 +2260,15 @@ func (nt NetTelemetry) MarshalJSON() ([]byte, error) {
 	result := make(map[string]any)
 
 	// Always included fields.
-	result["egress_total_domains"] = nt.EgressTotalDomains
-	result["egress_total_connections"] = nt.EgressTotalConnections
+	if !nt.Egress.IsZero() {
+		result["egress"] = nt.Egress
+	}
+	if !nt.Ingress.IsZero() {
+		result["ingress"] = nt.Ingress
+	}
+	if !nt.Local.IsZero() {
+		result["local"] = nt.Local
+	}
 
 	return json.Marshal(result)
 }
@@ -2309,11 +2346,7 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 // Assertion: A list of evidence that supports the assertion.
 
 type Assertion struct {
-	ID        string     `json:"id"`        // Detection kind.
-	Mechanism string     `json:"mechanism"` // Detection mechanism.
-	Result    string     `json:"result"`    // Suspicious ?
-	Details   string     `json:"details"`   // Note added to the assertion.
-	Evidence  []Evidence `json:"evidence"`  // Related detection events.
+	Evidence []Evidence `json:"evidence"` // Related detection events.
 }
 
 func (a Assertion) Clone() Assertion {
@@ -2322,20 +2355,12 @@ func (a Assertion) Clone() Assertion {
 		evidence[i] = e.Clone()
 	}
 	return Assertion{
-		ID:        a.ID,
-		Mechanism: a.Mechanism,
-		Result:    a.Result,
-		Details:   a.Details,
-		Evidence:  evidence,
+		Evidence: evidence,
 	}
 }
 
 func (a Assertion) IsZero() bool {
-	return a.ID == "" &&
-		a.Mechanism == "" &&
-		a.Result == "" &&
-		a.Details == "" &&
-		len(a.Evidence) == 0
+	return len(a.Evidence) == 0
 }
 
 func (a Assertion) MarshalJSON() ([]byte, error) {
@@ -2345,20 +2370,8 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 
 	result := make(map[string]any)
 
-	// Always included fields.
-	result["id"] = a.ID
-	result["mechanism"] = a.Mechanism
-
 	// Omit empty fields.
-	if a.Result != "" {
-		result["result"] = a.Result
-	}
-	if a.Details != "" {
-		result["details"] = a.Details
-	}
-	if len(a.Evidence) > 0 {
-		result["evidence"] = a.Evidence
-	}
+	result["evidence"] = a.Evidence
 
 	return json.Marshal(result)
 }
@@ -2368,8 +2381,8 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 type Profile struct {
 	Base
 	Network    NetProfile  `json:"network"`
-	Assertions []Assertion `json:"assertions"`
 	Telemetry  Telemetry   `json:"telemetry"`
+	Assertions []Assertion `json:"assertions"`
 }
 
 func (p Profile) Clone() Profile {
@@ -2380,16 +2393,16 @@ func (p Profile) Clone() Profile {
 	return Profile{
 		Base:       p.Base.Clone(),
 		Network:    p.Network.Clone(),
-		Assertions: assertions,
 		Telemetry:  p.Telemetry.Clone(),
+		Assertions: assertions,
 	}
 }
 
 func (p Profile) IsZero() bool {
 	return p.Base.IsZero() &&
 		p.Network.IsZero() &&
-		len(p.Assertions) == 0 &&
-		p.Telemetry.IsZero()
+		p.Telemetry.IsZero() &&
+		len(p.Assertions) == 0
 }
 
 func (p Profile) MarshalJSON() ([]byte, error) {
@@ -2412,12 +2425,14 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 	if !p.Network.IsZero() {
 		result["network"] = p.Network
 	}
-	if len(p.Assertions) > 0 {
-		result["assertions"] = p.Assertions
-	}
 	if !p.Telemetry.IsZero() {
 		result["telemetry"] = p.Telemetry
 	}
+
+	// NOTE: This would be a duplicate of telemetry.
+	// if len(p.Assertions) > 0 {
+	// 	result["assertions"] = p.Assertions
+	// }
 
 	return json.Marshal(result)
 }

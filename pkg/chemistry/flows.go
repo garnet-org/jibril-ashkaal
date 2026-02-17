@@ -1,6 +1,8 @@
 package chemistry
 
-import "fmt"
+import (
+	"fmt"
+)
 
 // FlowActionSide.
 
@@ -14,18 +16,23 @@ const (
 )
 
 func (fa FlowActionSide) String() string {
-	value := uint64(fa)
-	switch value {
-	case 0:
-		return ""
-	case 1:
+	switch fa {
+	case FlowActionSideLocal:
 		return "local"
-	case 2:
+	case FlowActionSideRemote:
 		return "remote"
-	case 3:
+	case FlowActionSideBoth:
 		return "both"
 	}
 	return "unknown"
+}
+
+func (fa FlowActionSide) Uint64() uint64 {
+	return uint64(fa)
+}
+
+func (fa FlowActionSide) Int() int {
+	return int(fa)
 }
 
 // FlowActionDirection.
@@ -40,18 +47,23 @@ const (
 )
 
 func (fa FlowActionDirection) String() string {
-	value := uint64(fa)
-	switch value {
-	case 0:
-		return ""
-	case 1:
+	switch fa {
+	case FlowActionDirectionIngress:
 		return "ingress"
-	case 2:
+	case FlowActionDirectionEgress:
 		return "egress"
-	case 3:
+	case FlowActionDirectionBoth:
 		return "both"
 	}
 	return "unknown"
+}
+
+func (fa FlowActionDirection) Uint64() uint64 {
+	return uint64(fa)
+}
+
+func (fa FlowActionDirection) Int() int {
+	return int(fa)
 }
 
 // FlowActionStatus.
@@ -66,18 +78,23 @@ const (
 )
 
 func (fa FlowActionStatus) String() string {
-	value := uint64(fa)
-	switch value {
-	case 0:
-		return ""
-	case 1:
+	switch fa {
+	case FlowActionStatusOngoing:
 		return "ongoing"
-	case 2:
+	case FlowActionStatusStarted:
 		return "started"
-	case 3:
+	case FlowActionStatusEnded:
 		return "ended"
 	}
 	return "unknown"
+}
+
+func (fa FlowActionStatus) Uint64() uint64 {
+	return uint64(fa)
+}
+
+func (fa FlowActionStatus) Int() int {
+	return int(fa)
 }
 
 // FlowActionHow.
@@ -100,6 +117,14 @@ func (f FlowActionHow) String() string {
 	default:
 		return "none"
 	}
+}
+
+func (f FlowActionHow) Uint64() uint64 {
+	return uint64(f)
+}
+
+func (f FlowActionHow) Int() int {
+	return int(f)
 }
 
 // FlowAction.
