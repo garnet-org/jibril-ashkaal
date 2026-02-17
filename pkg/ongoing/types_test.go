@@ -306,11 +306,11 @@ func TestProfile(t *testing.T) {
 		},
 		Network: NetProfile{
 			Egress: Egress{
-				Peers:       []Peer{},
+				Peers:       nil,
 				SeenDomains: []string{"example.com", "registry.npmjs.org"},
 			},
 		},
-		Assertions: []Assertion{},
+		Assertions: nil,
 		Telemetry: Telemetry{
 			Network: NetTelemetry{
 				EgressTotalDomains:     12,
