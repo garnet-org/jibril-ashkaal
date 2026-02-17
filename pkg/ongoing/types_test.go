@@ -9,6 +9,64 @@ import (
 	"github.com/google/go-cmp/cmp"
 )
 
+func TestScore_Clone(t *testing.T) {
+	orig := Score{
+		Source:        "s",
+		Severity:      50,
+		SeverityLevel: "medium",
+		Confidence:    0.8,
+		RiskScore:     40,
+		Reasons:       []string{"reason_score_one_abc", "reason_score_two_xyz"},
+	}
+	c := orig.Clone()
+	assert.Equal(t, orig, c)
+	c.Severity = 100
+	assert.Equal(t, 50, orig.Severity)
+}
+
+func TestScore_IsZero(t *testing.T) {
+	assert.True(t, Score{}.IsZero())
+	assert.True(t, Score{RiskScore: 0}.IsZero())
+	assert.False(t, Score{Source: "garnet"}.IsZero())
+	assert.False(t, Score{Severity: 50}.IsZero())
+	assert.False(t, Score{SeverityLevel: "none"}.IsZero())
+	assert.False(t, Score{Confidence: 0.1}.IsZero())
+	assert.False(t, Score{RiskScore: 10}.IsZero())
+	assert.False(t, Score{Reasons: []string{"reason"}}.IsZero())
+}
+
+func TestScore_MarshalJSON(t *testing.T) {
+	b, err := json.Marshal(Score{})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
+
+	b, err = json.Marshal(Score{RiskScore: 0})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
+
+	s := Score{
+		Source:        "g",
+		Severity:      75,
+		SeverityLevel: "high",
+		Confidence:    0.85,
+		RiskScore:     50,
+	}
+
+	b, err = json.Marshal(s)
+	assert.NoError(t, err)
+	assert.Contains(t, string(b), `"risk_score":50`)
+
+	s2 := Score{Source: "g",
+		Severity:      0,
+		SeverityLevel: "none",
+		Confidence:    0.5,
+	}
+
+	b, err = json.Marshal(s2)
+	assert.NoError(t, err)
+	assert.NotContains(t, string(b), "risk_score")
+}
+
 func TestProfile(t *testing.T) {
 	want := Profile{
 		Base: Base{
