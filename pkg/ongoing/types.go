@@ -584,12 +584,10 @@ type DropIP struct {
 }
 
 func (d DropIP) Clone() DropIP {
-	names := make([]string, len(d.Names))
-	copy(names, d.Names)
 	return DropIP{
 		Base:  d.Base.Clone(),
 		IP:    d.IP,
-		Names: names,
+		Names: append([]string(nil), d.Names...),
 		Flow:  d.Flow.Clone(),
 	}
 }
@@ -999,10 +997,8 @@ type FileActions struct {
 }
 
 func (f FileActions) Clone() FileActions {
-	actions := make([]string, len(f.Actions))
-	copy(actions, f.Actions)
 	return FileActions{
-		Actions:  actions,
+		Actions:  append([]string(nil), f.Actions...),
 		Open:     f.Open,
 		Read:     f.Read,
 		Write:    f.Write,
@@ -1157,12 +1153,10 @@ type FSFile struct {
 }
 
 func (f FSFile) Clone() FSFile {
-	actions := make([]string, len(f.Actions))
-	copy(actions, f.Actions)
 	return FSFile{
 		Path:     f.Path,
 		Base:     f.Base,
-		Actions:  actions,
+		Actions:  append([]string(nil), f.Actions...),
 		Mode:     f.Mode,
 		Owner:    f.Owner,
 		Metadata: f.Metadata,
@@ -1302,12 +1296,10 @@ type Node struct {
 }
 
 func (n Node) Clone() Node {
-	names := make([]string, len(n.Names))
-	copy(names, n.Names)
 	return Node{
 		Address: n.Address,
 		Name:    n.Name,
-		Names:   names,
+		Names:   append([]string(nil), n.Names...),
 		Port:    n.Port,
 	}
 }
@@ -1546,12 +1538,10 @@ type ProtocolNode struct {
 }
 
 func (p ProtocolNode) Clone() ProtocolNode {
-	names := make([]string, len(p.Names))
-	copy(names, p.Names)
 	return ProtocolNode{
 		Address: p.Address,
 		Name:    p.Name,
-		Names:   names,
+		Names:   append([]string(nil), p.Names...),
 	}
 }
 
@@ -1767,6 +1757,14 @@ type Mount struct {
 	Type        string `json:"type"`
 }
 
+func (m Mount) Clone() Mount {
+	return Mount{
+		Source:      m.Source,
+		Destination: m.Destination,
+		Type:        m.Type,
+	}
+}
+
 func (m Mount) IsZero() bool {
 	return m.Source == "" &&
 		m.Destination == "" &&
@@ -1820,11 +1818,9 @@ type Container struct {
 
 func (c Container) Clone() Container {
 	mounts := make([]Mount, len(c.Mounts))
-	copy(mounts, c.Mounts)
-	env := make([]string, len(c.Env))
-	copy(env, c.Env)
-	cmd := make([]string, len(c.Cmd))
-	copy(cmd, c.Cmd)
+	for i, m := range c.Mounts {
+		mounts[i] = m.Clone()
+	}
 	return Container{
 		ID:           c.ID,
 		Name:         c.Name,
@@ -1850,8 +1846,8 @@ func (c Container) Clone() Container {
 		PidMode:      c.PidMode,
 		UsernsMode:   c.UsernsMode,
 		UTSMode:      c.UTSMode,
-		Env:          env,
-		Cmd:          cmd,
+		Env:          append([]string(nil), c.Env...),
+		Cmd:          append([]string(nil), c.Cmd...),
 		Namespaces:   c.Namespaces,
 	}
 }
@@ -1991,7 +1987,7 @@ type ProcessTree struct {
 func (pt ProcessTree) Clone() ProcessTree {
 	return ProcessTree{
 		Process:  pt.Process,
-		Ancestry: pt.Ancestry,
+		Ancestry: append([]string(nil), pt.Ancestry...),
 	}
 }
 
@@ -2066,11 +2062,11 @@ func (ep Peer) Clone() Peer {
 		Protocol:      ep.Protocol,
 		LocalAddress:  ep.LocalAddress,
 		LocalName:     ep.LocalName,
-		LocalNames:    ep.LocalNames,
+		LocalNames:    append([]string(nil), ep.LocalNames...),
 		RemoteAddress: ep.RemoteAddress,
 		RemoteName:    ep.RemoteName,
-		RemoteNames:   ep.RemoteNames,
-		RemotePorts:   ep.RemotePorts,
+		RemoteNames:   append([]string(nil), ep.RemoteNames...),
+		RemotePorts:   append([]string(nil), ep.RemotePorts...),
 		ProcTrees:     processTrees,
 	}
 }
@@ -2146,15 +2142,13 @@ type Egress struct {
 }
 
 func (e Egress) Clone() Egress {
-	uniqueDomains := make([]string, len(e.SeenDomains))
-	copy(uniqueDomains, e.SeenDomains)
-	egressPeers := make([]Peer, len(e.Peers))
+	peers := make([]Peer, len(e.Peers))
 	for i, ep := range e.Peers {
-		egressPeers[i] = ep.Clone()
+		peers[i] = ep.Clone()
 	}
 	return Egress{
-		Peers:       egressPeers,
-		SeenDomains: uniqueDomains,
+		Peers:       peers,
+		SeenDomains: append([]string(nil), e.SeenDomains...),
 	}
 }
 
