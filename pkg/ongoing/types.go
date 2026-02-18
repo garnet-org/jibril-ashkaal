@@ -2343,10 +2343,57 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(result)
 }
 
+// AssertionResult: A result of an assertion.
+
+type AssertionResult string
+
+const (
+	AssertionResultGood      AssertionResult = "good"
+	AssertionResultAttention AssertionResult = "attention"
+	AssertionResultBad       AssertionResult = "bad"
+)
+
+func (ar AssertionResult) IsGood() bool {
+	return ar == AssertionResultGood
+}
+
+func (ar AssertionResult) IsAttention() bool {
+	return ar == AssertionResultAttention
+}
+
+func (ar AssertionResult) IsBad() bool {
+	return ar == AssertionResultBad
+}
+
+func (ar AssertionResult) String() string {
+	return string(ar)
+}
+
+func (ar AssertionResult) IsZero() bool {
+	return ar.Number() == 0
+}
+
+func (ar AssertionResult) MarshalJSON() ([]byte, error) {
+	return json.Marshal(ar.String())
+}
+
+func (ar AssertionResult) Number() int {
+	switch ar {
+	case AssertionResultGood:
+		return 1
+	case AssertionResultAttention:
+		return 2
+	case AssertionResultBad:
+		return 3
+	}
+	return 0
+}
+
 // Assertion: A list of evidence that supports the assertion.
 
 type Assertion struct {
-	Evidence []Evidence `json:"evidence"` // Related detection events.
+	Result   AssertionResult `json:"result"`   // Result of the assertion.
+	Evidence []Evidence      `json:"evidence"` // Detections supporting the result.
 }
 
 func (a Assertion) Clone() Assertion {
@@ -2355,12 +2402,13 @@ func (a Assertion) Clone() Assertion {
 		evidence[i] = e.Clone()
 	}
 	return Assertion{
+		Result:   a.Result,
 		Evidence: evidence,
 	}
 }
 
 func (a Assertion) IsZero() bool {
-	return len(a.Evidence) == 0
+	return a.Result.IsZero() && len(a.Evidence) == 0
 }
 
 func (a Assertion) MarshalJSON() ([]byte, error) {
@@ -2370,8 +2418,14 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 
 	result := make(map[string]any)
 
-	// Omit empty fields.
-	result["evidence"] = a.Evidence
+	// Always included fields.
+	if !a.Result.IsZero() {
+		result["result"] = a.Result
+	}
+
+	if len(a.Evidence) > 0 {
+		result["evidence"] = a.Evidence
+	}
 
 	return json.Marshal(result)
 }
@@ -2429,10 +2483,9 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 		result["telemetry"] = p.Telemetry
 	}
 
-	// NOTE: This would be a duplicate of telemetry.
-	// if len(p.Assertions) > 0 {
-	// 	result["assertions"] = p.Assertions
-	// }
+	if len(p.Assertions) > 0 {
+		result["assertions"] = p.Assertions
+	}
 
 	return json.Marshal(result)
 }
