@@ -2038,6 +2038,7 @@ func (pt ProcessTree) StringSlice() []string {
 // Egress Peer: A single remote peer that supports the egress profile.
 
 type Peer struct {
+	Result        Result        `json:"result"`
 	Protocol      string        `json:"protocol"`
 	LocalAddress  string        `json:"local_address"`
 	RemoteAddress string        `json:"remote_address"`
@@ -2054,6 +2055,7 @@ func (ep Peer) Clone() Peer {
 		processTrees[i] = tree.Clone()
 	}
 	return Peer{
+		Result:        ep.Result,
 		Protocol:      ep.Protocol,
 		LocalAddress:  ep.LocalAddress,
 		LocalNames:    append([]string(nil), ep.LocalNames...),
@@ -2066,7 +2068,8 @@ func (ep Peer) Clone() Peer {
 }
 
 func (ep Peer) IsZero() bool {
-	return ep.Protocol == "" &&
+	return ep.Result.IsZero() &&
+		ep.Protocol == "" &&
 		ep.LocalAddress == "" &&
 		ep.RemoteAddress == "" &&
 		len(ep.LocalNames) == 0 &&
@@ -2082,6 +2085,9 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 	}
 
 	result := make(map[string]any)
+
+	// Consider empty result as good.
+	result["result"] = ep.Result
 
 	// Always included fields.
 	result["protocol"] = ep.Protocol
@@ -2343,57 +2349,157 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(result)
 }
 
-// AssertionResult: A result of an assertion.
+// ResultID: A unique identifier for a result.
 
-type AssertionResult string
+type ResultID uint64
 
 const (
-	AssertionResultGood      AssertionResult = "good"
-	AssertionResultAttention AssertionResult = "attention"
-	AssertionResultBad       AssertionResult = "bad"
+	ResultIDNone            ResultID = 0
+	ResultNoBadEgressDomain ResultID = 1 << (iota - 1)
+	ResultNoBadIngressDomain
+	ResultNoBadLocalDomain
+	ResultIDMax
 )
 
-func (ar AssertionResult) IsGood() bool {
-	return ar == AssertionResultGood
+var resultIDStrings = map[ResultID]string{
+	ResultIDNone:             "",
+	ResultNoBadEgressDomain:  "no_bad_egress_domain",
+	ResultNoBadIngressDomain: "no_bad_ingress_domain",
+	ResultNoBadLocalDomain:   "no_bad_local_domain",
 }
 
-func (ar AssertionResult) IsAttention() bool {
-	return ar == AssertionResultAttention
+func (rid ResultID) IsZero() bool {
+	return rid == ResultIDNone
 }
 
-func (ar AssertionResult) IsBad() bool {
-	return ar == AssertionResultBad
-}
-
-func (ar AssertionResult) String() string {
-	return string(ar)
-}
-
-func (ar AssertionResult) IsZero() bool {
-	return ar.Number() == 0
-}
-
-func (ar AssertionResult) MarshalJSON() ([]byte, error) {
-	return json.Marshal(ar.String())
-}
-
-func (ar AssertionResult) Number() int {
-	switch ar {
-	case AssertionResultGood:
-		return 1
-	case AssertionResultAttention:
-		return 2
-	case AssertionResultBad:
-		return 3
+func (rid ResultID) String() string {
+	if rid == ResultIDNone {
+		return ""
 	}
-	return 0
+
+	var parts []string
+	for id, name := range resultIDStrings {
+		if id == ResultIDNone {
+			continue
+		}
+		if rid&id != 0 {
+			parts = append(parts, name)
+		}
+	}
+
+	if len(parts) == 0 {
+		return resultIDStrings[ResultIDNone]
+	}
+
+	return strings.Join(parts, "|")
+}
+
+func (rid ResultID) StringSlice() []string {
+	if rid == ResultIDNone {
+		return []string{}
+	}
+
+	var parts []string
+	for id, name := range resultIDStrings {
+		if id == ResultIDNone {
+			continue
+		}
+		if rid&id != 0 {
+			parts = append(parts, name)
+		}
+	}
+
+	return parts
+}
+
+// Result: A result of an assertion.
+
+type Result uint
+
+const (
+	ResultNone Result = 0
+	ResultGood Result = 1 << iota
+	ResultAttention
+	ResultBad
+)
+
+var resultStrings = map[Result]string{
+	ResultNone:      "",
+	ResultGood:      "good",
+	ResultAttention: "attention",
+	ResultBad:       "bad",
+}
+
+func (r Result) IsGood() bool {
+	return r&ResultGood != 0
+}
+
+func (r Result) IsAttention() bool {
+	return r&ResultAttention != 0
+}
+
+func (r Result) IsBad() bool {
+	return r&ResultBad != 0
+}
+
+func (r Result) IsZero() bool {
+	return r == ResultNone
+}
+
+func (r Result) String() string {
+	if r == ResultNone {
+		return ""
+	}
+
+	var parts []string
+	for id, name := range resultStrings {
+		if id == ResultNone {
+			continue
+		}
+		if r&id != 0 {
+			parts = append(parts, name)
+		}
+	}
+
+	if len(parts) == 0 {
+		return resultStrings[ResultNone]
+	}
+
+	return strings.Join(parts, "|")
+}
+
+func (r Result) StringSlice() []string {
+	if r == ResultNone {
+		return []string{}
+	}
+
+	var parts []string
+	for id, name := range resultStrings {
+		if id == ResultNone {
+			continue
+		}
+		if r&id != 0 {
+			parts = append(parts, name)
+		}
+	}
+
+	return parts
+}
+
+func (r Result) MarshalJSON() ([]byte, error) {
+	return json.Marshal(r.String())
+}
+
+func (r Result) Number() int {
+	return int(r)
 }
 
 // Assertion: A list of evidence that supports the assertion.
 
 type Assertion struct {
-	Result   AssertionResult `json:"result"`   // Result of the assertion.
-	Evidence []Evidence      `json:"evidence"` // Detections supporting the result.
+	Result   Result     `json:"result"`   // Result of the assertion.
+	ResultID ResultID   `json:"id"`       // Result ID.
+	Evidence []Evidence `json:"evidence"` // Detections supporting the result.
 }
 
 func (a Assertion) Clone() Assertion {
@@ -2403,12 +2509,15 @@ func (a Assertion) Clone() Assertion {
 	}
 	return Assertion{
 		Result:   a.Result,
+		ResultID: a.ResultID,
 		Evidence: evidence,
 	}
 }
 
 func (a Assertion) IsZero() bool {
-	return a.Result.IsZero() && len(a.Evidence) == 0
+	return a.Result.IsZero() &&
+		a.ResultID.IsZero() &&
+		len(a.Evidence) == 0
 }
 
 func (a Assertion) MarshalJSON() ([]byte, error) {
@@ -2419,10 +2528,16 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 	result := make(map[string]any)
 
 	// Always included fields.
-	if !a.Result.IsZero() {
-		result["result"] = a.Result
+	if a.Result.IsZero() {
+		result["result"] = ResultGood
+	} else {
+		result["result"] = a.Result.String()
 	}
-
+	if a.ResultID.IsZero() {
+		result["id"] = ResultNoBadEgressDomain
+	} else {
+		result["id"] = a.ResultID.String()
+	}
 	if len(a.Evidence) > 0 {
 		result["evidence"] = a.Evidence
 	}
