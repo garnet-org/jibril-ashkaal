@@ -2086,10 +2086,8 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 
 	result := make(map[string]any)
 
-	// Consider empty result as good.
-	result["result"] = ep.Result
-
 	// Always included fields.
+	result["result"] = ep.Result.String()
 	result["protocol"] = ep.Protocol
 	result["local_address"] = ep.LocalAddress
 	result["remote_address"] = ep.RemoteAddress
@@ -2425,9 +2423,9 @@ const (
 
 var resultStrings = map[Result]string{
 	ResultNone:      "",
-	ResultGood:      "good",
+	ResultGood:      "pass",
 	ResultAttention: "attention",
-	ResultBad:       "bad",
+	ResultBad:       "fail",
 }
 
 func (r Result) IsGood() bool {
@@ -2529,12 +2527,12 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 
 	// Always included fields.
 	if a.Result.IsZero() {
-		result["result"] = ResultGood
+		result["result"] = ResultGood.String()
 	} else {
 		result["result"] = a.Result.String()
 	}
 	if a.ResultID.IsZero() {
-		result["id"] = ResultNoBadEgressDomain
+		result["id"] = ResultNoBadEgressDomain.String()
 	} else {
 		result["id"] = a.ResultID.String()
 	}
