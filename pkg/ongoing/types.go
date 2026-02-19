@@ -2,6 +2,7 @@ package ongoing
 
 import (
 	"encoding/json"
+	"fmt"
 	"strings"
 )
 
@@ -2035,6 +2036,122 @@ func (pt ProcessTree) StringSlice() []string {
 	return ancestry
 }
 
+// GeoIP location type.
+
+type GeoIPLocation struct {
+	Latitude      float64 `json:"latitude"`
+	Longitude     float64 `json:"longitude"`
+	Continent     string  `json:"continent"`
+	ContinentCode string  `json:"continentCode"`
+	Country       string  `json:"country"`
+	CountryCode   string  `json:"countryCode"`
+	Region        string  `json:"region"`
+	RegionName    string  `json:"regionName"`
+	City          string  `json:"city"`
+	ISP           string  `json:"isp"`
+	Org           string  `json:"org"`
+	Asname        string  `json:"asname"`
+}
+
+func (gl GeoIPLocation) Clone() GeoIPLocation {
+	return GeoIPLocation{
+		Latitude:      gl.Latitude,
+		Longitude:     gl.Longitude,
+		Continent:     gl.Continent,
+		ContinentCode: gl.ContinentCode,
+		Country:       gl.Country,
+		CountryCode:   gl.CountryCode,
+		Region:        gl.Region,
+		RegionName:    gl.RegionName,
+		City:          gl.City,
+		ISP:           gl.ISP,
+		Org:           gl.Org,
+		Asname:        gl.Asname,
+	}
+}
+
+func (gl GeoIPLocation) IsZero() bool {
+	return gl.Latitude == 0 &&
+		gl.Longitude == 0 &&
+		gl.Continent == "" &&
+		gl.ContinentCode == "" &&
+		gl.Country == "" &&
+		gl.CountryCode == "" &&
+		gl.Region == "" &&
+		gl.RegionName == "" &&
+		gl.City == "" &&
+		gl.ISP == "" &&
+		gl.Org == "" &&
+		gl.Asname == ""
+}
+
+func (gl GeoIPLocation) MarshalJSON() ([]byte, error) {
+	if gl.IsZero() {
+		return []byte("null"), nil
+	}
+
+	result := make(map[string]any)
+
+	if gl.Latitude != 0 {
+		result["latitude"] = gl.Latitude
+	}
+	if gl.Longitude != 0 {
+		result["longitude"] = gl.Longitude
+	}
+	if gl.Continent != "" {
+		result["continent"] = gl.Continent
+	}
+	if gl.ContinentCode != "" {
+		result["continent_code"] = gl.ContinentCode
+	}
+	if gl.Country != "" {
+		result["country"] = gl.Country
+	}
+	if gl.CountryCode != "" {
+		result["country_code"] = gl.CountryCode
+	}
+	if gl.Region != "" {
+		result["region"] = gl.Region
+	}
+	if gl.RegionName != "" {
+		result["region_name"] = gl.RegionName
+	}
+	if gl.City != "" {
+		result["city"] = gl.City
+	}
+	if gl.ISP != "" {
+		result["isp"] = gl.ISP
+	}
+	if gl.Org != "" {
+		result["org"] = gl.Org
+	}
+	if gl.Asname != "" {
+		result["asname"] = gl.Asname
+	}
+
+	return json.Marshal(result)
+}
+
+func (gl GeoIPLocation) String() string {
+	if gl.IsZero() {
+		return ""
+	}
+	return strings.Join([]string{
+		fmt.Sprintf("%f", gl.Latitude),
+		fmt.Sprintf("%f", gl.Longitude),
+		gl.Continent,
+		gl.ContinentCode,
+		gl.Country,
+		gl.CountryCode,
+		gl.Region,
+		gl.RegionName,
+		gl.City,
+		gl.ISP,
+		gl.Org,
+		gl.Asname,
+	}, ", ")
+}
+
 // Egress Peer: A single remote peer that supports the egress profile.
 
 type Peer struct {
@@ -2047,6 +2164,7 @@ type Peer struct {
 	RemotePorts   []string      `json:"remote_ports"`
 	Detections    []string      `json:"detections"`
 	ProcTrees     []ProcessTree `json:"proc_trees"`
+	RemoteGeoInfo GeoIPLocation `json:"remote_geo_info"`
 }
 
 func (ep Peer) Clone() Peer {
@@ -2064,6 +2182,7 @@ func (ep Peer) Clone() Peer {
 		RemotePorts:   append([]string(nil), ep.RemotePorts...),
 		Detections:    append([]string(nil), ep.Detections...),
 		ProcTrees:     processTrees,
+		RemoteGeoInfo: ep.RemoteGeoInfo,
 	}
 }
 
@@ -2076,7 +2195,8 @@ func (ep Peer) IsZero() bool {
 		len(ep.RemoteNames) == 0 &&
 		len(ep.RemotePorts) == 0 &&
 		len(ep.Detections) == 0 &&
-		len(ep.ProcTrees) == 0
+		len(ep.ProcTrees) == 0 &&
+		ep.RemoteGeoInfo.IsZero()
 }
 
 func (ep Peer) MarshalJSON() ([]byte, error) {
@@ -2107,6 +2227,9 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 	}
 	if len(ep.ProcTrees) > 0 {
 		result["proc_trees"] = ep.ProcTrees
+	}
+	if !ep.RemoteGeoInfo.IsZero() {
+		result["remote_geo_info"] = ep.RemoteGeoInfo
 	}
 
 	return json.Marshal(result)
