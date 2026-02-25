@@ -101,6 +101,10 @@ func TestProfile(t *testing.T) {
 				SeverityLevel: "high",
 				Confidence:    0.84,
 				RiskScore:     60.3,
+				Reasons: []string{
+					"domain_not_seen_before",
+					"process_contacted_external_service",
+				},
 			},
 			Background: Background{
 				Files: FileAggregate{
@@ -227,7 +231,7 @@ func TestProfile(t *testing.T) {
 							Runtime:    "containerd",
 							Driver:     "overlay2",
 							PID:        4242,
-							ExitCode:   0,
+							ExitCode:   137,
 							Status:     "running",
 							IsAttached: true,
 							Path:       "/usr/bin/runner",
@@ -364,11 +368,153 @@ func TestProfile(t *testing.T) {
 		},
 		Network: NetProfile{
 			Egress: Direction{
-				Peers:   nil,
+				Peers: []Peer{
+					{
+						Result:        ResultBad,
+						Protocol:      "tcp",
+						LocalAddress:  "10.0.0.5",
+						RemoteAddress: "93.184.216.34",
+						LocalNames:    []string{"build-agent", "build-agent.local"},
+						RemoteNames:   []string{"example.com", "www.example.com"},
+						RemotePorts:   []string{"443", "8443"},
+						Detections:    []string{"det-001", "det-005"},
+						ProcTrees: []ProcessTree{
+							{
+								Process:  "/usr/bin/runner --once",
+								Ancestry: []string{"/usr/bin/bash -lc ./start.sh", "/sbin/init"},
+							},
+						},
+						RemoteGeoInfo: GeoIPLocation{
+							Latitude:      37.7749,
+							Longitude:     -122.4194,
+							Continent:     "North America",
+							ContinentCode: "NA",
+							Country:       "United States",
+							CountryCode:   "US",
+							Region:        "CA",
+							RegionName:    "California",
+							City:          "San Francisco",
+							ISP:           "Example ISP",
+							Org:           "Example Org",
+							Asname:        "AS15133",
+						},
+					},
+				},
 				Domains: []string{"example.com", "registry.npmjs.org"},
 			},
+			Ingress: Direction{
+				Peers: []Peer{
+					{
+						Result:        ResultAttention,
+						Protocol:      "udp",
+						LocalAddress:  "10.0.0.5",
+						RemoteAddress: "10.0.0.10",
+						LocalNames:    []string{"runner-host"},
+						RemoteNames:   []string{"metrics.local"},
+						RemotePorts:   []string{"53"},
+						Detections:    []string{"det-002"},
+						ProcTrees: []ProcessTree{
+							{
+								Process:  "/usr/bin/resolvectl query metrics.local",
+								Ancestry: []string{"/usr/bin/systemd-resolved"},
+							},
+						},
+						RemoteGeoInfo: GeoIPLocation{
+							Latitude:      40.7128,
+							Longitude:     -74.0060,
+							Continent:     "North America",
+							ContinentCode: "NA",
+							Country:       "United States",
+							CountryCode:   "US",
+							Region:        "NY",
+							RegionName:    "New York",
+							City:          "New York",
+							ISP:           "Datacenter ISP",
+							Org:           "Metrics Org",
+							Asname:        "AS64500",
+						},
+					},
+				},
+				Domains: []string{"metrics.local"},
+			},
+			Local: Direction{
+				Peers: []Peer{
+					{
+						Result:        ResultGood,
+						Protocol:      "unix",
+						LocalAddress:  "/var/run/runner.sock",
+						RemoteAddress: "/var/run/docker.sock",
+						LocalNames:    []string{"runner"},
+						RemoteNames:   []string{"docker"},
+						RemotePorts:   []string{"0"},
+						Detections:    []string{"det-003"},
+						ProcTrees: []ProcessTree{
+							{
+								Process:  "/usr/bin/runner --once",
+								Ancestry: []string{"/usr/bin/containerd"},
+							},
+						},
+						RemoteGeoInfo: GeoIPLocation{
+							Latitude:      0.0,
+							Longitude:     0.0,
+							Continent:     "local",
+							ContinentCode: "LC",
+							Country:       "local",
+							CountryCode:   "LC",
+							Region:        "local",
+							RegionName:    "local",
+							City:          "local",
+							ISP:           "local",
+							Org:           "local",
+							Asname:        "local",
+						},
+					},
+				},
+				Domains: []string{"localhost", "docker.internal"},
+			},
 		},
-		Assertions: nil,
+		Assertions: []Assertion{
+			{
+				Result:   ResultBad,
+				ResultID: ResultNoBadEgressDomain,
+				Evidence: []Evidence{
+					{
+						Timestamp: "2026-02-12T10:14:58Z",
+						EventName: "network_connection",
+						Peer: Peer{
+							Result:        ResultBad,
+							Protocol:      "tcp",
+							LocalAddress:  "10.0.0.5",
+							RemoteAddress: "93.184.216.34",
+							LocalNames:    []string{"build-agent.local"},
+							RemoteNames:   []string{"example.com"},
+							RemotePorts:   []string{"443"},
+							Detections:    []string{"det-001"},
+							ProcTrees: []ProcessTree{
+								{
+									Process:  "/usr/bin/runner --once",
+									Ancestry: []string{"/usr/bin/bash -lc ./start.sh"},
+								},
+							},
+							RemoteGeoInfo: GeoIPLocation{
+								Latitude:      37.7749,
+								Longitude:     -122.4194,
+								Continent:     "North America",
+								ContinentCode: "NA",
+								Country:       "United States",
+								CountryCode:   "US",
+								Region:        "CA",
+								RegionName:    "California",
+								City:          "San Francisco",
+								ISP:           "Example ISP",
+								Org:           "Example Org",
+								Asname:        "AS15133",
+							},
+						},
+					},
+				},
+			},
+		},
 		Telemetry: Telemetry{
 			Network: NetTelemetry{
 				Egress: DirectionNetTelemetry{

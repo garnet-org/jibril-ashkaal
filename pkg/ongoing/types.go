@@ -2042,11 +2042,11 @@ type GeoIPLocation struct {
 	Latitude      float64 `json:"latitude"`
 	Longitude     float64 `json:"longitude"`
 	Continent     string  `json:"continent"`
-	ContinentCode string  `json:"continentCode"`
+	ContinentCode string  `json:"continent_code"`
 	Country       string  `json:"country"`
-	CountryCode   string  `json:"countryCode"`
+	CountryCode   string  `json:"country_code"`
 	Region        string  `json:"region"`
-	RegionName    string  `json:"regionName"`
+	RegionName    string  `json:"region_name"`
 	City          string  `json:"city"`
 	ISP           string  `json:"isp"`
 	Org           string  `json:"org"`
@@ -2220,7 +2220,7 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 		result["remote_names"] = ep.RemoteNames
 	}
 	if len(ep.RemotePorts) > 0 {
-		result["ports"] = ep.RemotePorts
+		result["remote_ports"] = ep.RemotePorts
 	}
 	if len(ep.Detections) > 0 {
 		result["detections"] = ep.Detections
@@ -2533,6 +2533,57 @@ func (rid ResultID) StringSlice() []string {
 	return parts
 }
 
+func (rid *ResultID) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*rid = ResultIDNone
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		if s == "" {
+			*rid = ResultIDNone
+			return nil
+		}
+
+		parts := strings.Split(s, "|")
+		var result ResultID
+		for _, part := range parts {
+			name := strings.TrimSpace(part)
+			if name == "" {
+				continue
+			}
+
+			matched := false
+			for id, idName := range resultIDStrings {
+				if id == ResultIDNone {
+					continue
+				}
+				if idName == name {
+					result |= id
+					matched = true
+					break
+				}
+			}
+
+			if !matched {
+				return fmt.Errorf("invalid result id: %s", name)
+			}
+		}
+
+		*rid = result
+		return nil
+	}
+
+	var n uint64
+	if err := json.Unmarshal(data, &n); err == nil {
+		*rid = ResultID(n)
+		return nil
+	}
+
+	return fmt.Errorf("invalid result id payload: %s", string(data))
+}
+
 // Result: A result of an assertion.
 
 type Result uint
@@ -2609,6 +2660,57 @@ func (r Result) StringSlice() []string {
 
 func (r Result) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.String())
+}
+
+func (r *Result) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*r = ResultNone
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		if s == "" {
+			*r = ResultNone
+			return nil
+		}
+
+		parts := strings.Split(s, "|")
+		var result Result
+		for _, part := range parts {
+			name := strings.TrimSpace(part)
+			if name == "" {
+				continue
+			}
+
+			matched := false
+			for id, resultName := range resultStrings {
+				if id == ResultNone {
+					continue
+				}
+				if resultName == name {
+					result |= id
+					matched = true
+					break
+				}
+			}
+
+			if !matched {
+				return fmt.Errorf("invalid result: %s", name)
+			}
+		}
+
+		*r = result
+		return nil
+	}
+
+	var n uint
+	if err := json.Unmarshal(data, &n); err == nil {
+		*r = Result(n)
+		return nil
+	}
+
+	return fmt.Errorf("invalid result payload: %s", string(data))
 }
 
 func (r Result) Number() int {
