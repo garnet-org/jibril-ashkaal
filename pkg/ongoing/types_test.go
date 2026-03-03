@@ -56,7 +56,8 @@ func TestScore_MarshalJSON(t *testing.T) {
 	assert.NoError(t, err)
 	assert.Contains(t, string(b), `"risk_score":50`)
 
-	s2 := Score{Source: "g",
+	s2 := Score{
+		Source:        "g",
 		Severity:      0,
 		SeverityLevel: "none",
 		Confidence:    0.5,
@@ -71,7 +72,7 @@ func TestProfile(t *testing.T) {
 	want := Profile{
 		Base: Base{
 			UUID:      "det-001",
-			Timestamp: "2026-02-12T10:15:00Z",
+			Timestamp: time.Date(2026, 2, 12, 10, 15, 0, 0, time.UTC),
 			Note:      "Outbound connection to new domain",
 			Metadata: Metadata{
 				Kind:          "profile",
@@ -107,142 +108,157 @@ func TestProfile(t *testing.T) {
 				},
 			},
 			Background: Background{
-				Files: FileAggregate{
-					Root: FSDir{
-						Path: "/srv/app",
-						Base: "app",
-						Dirs: []FSDir{
-							{
-								Path: "/srv/app/bin",
-								Base: "bin",
-								Files: []FSFile{
-									{
-										Path:    "/srv/app/bin/worker",
-										Base:    "worker",
-										Actions: []string{"read", "exec"},
-										Mode:    "0755",
-										Owner:   FileOwner{UID: 1000, GID: 1000},
-										Metadata: FileMetadata{
-											Size:     1048576,
-											Access:   "2026-02-12T10:14:40Z",
-											Change:   "2026-02-12T10:14:30Z",
-											Creation: "2026-02-01T08:00:00Z",
-										},
-									},
-								},
-							},
+				Files: []File{
+					{
+						UUID: "file-001",
+						Path: "/srv/app/bin/worker",
+						Dir:  "/srv/app/bin",
+						Base: "worker",
+						Type: "regular",
+						Owner: FileOwner{
+							UID: 1000,
+							GID: 1000,
 						},
-						Files: []FSFile{
-							{
-								Path:    "/srv/app/config.yaml",
-								Base:    "config.yaml",
-								Actions: []string{"open", "read"},
-								Mode:    "0644",
-								Owner:   FileOwner{UID: 1000, GID: 1000},
-								Metadata: FileMetadata{
-									Size:     2048,
-									Access:   "2026-02-12T10:14:00Z",
-									Change:   "2026-02-10T12:00:00Z",
-									Creation: "2026-01-20T09:00:00Z",
-								},
-							},
+						Actions: FileActions{
+							Actions: []string{"read", "exec"},
+							Read:    true,
+							Exec:    true,
+						},
+						Permissions: FilePermissions{
+							Mode:       "0755",
+							OwnerRead:  true,
+							OwnerWrite: true,
+							OwnerExec:  true,
+							GroupRead:  true,
+							GroupExec:  true,
+							OtherRead:  true,
+							OtherExec:  true,
+						},
+						Metadata: FileMetadata{
+							Size:     1048576,
+							Access:   time.Date(2026, 2, 12, 10, 14, 40, 0, time.UTC),
+							Change:   time.Date(2026, 2, 12, 10, 14, 30, 0, time.UTC),
+							Creation: time.Date(2026, 2, 1, 8, 0, 0, 0, time.UTC),
 						},
 					},
-				},
-				Flows: FlowAggregate{
-					IPVersion: 4,
-					Protocols: []ProtocolAggregate{
-						{
-							Proto: "tcp",
-							Pairs: []ProtocolLocalRemoteAgg{
-								{
-									Nodes: LocalRemotePair{
-										Local: ProtocolNode{
-											Address: "10.0.0.5",
-											Name:    "build-agent",
-											Names:   []string{"build-agent.local"},
-										},
-										Remote: ProtocolNode{
-											Address: "93.184.216.34",
-											Name:    "example.com",
-											Names:   []string{"example.com", "www.example.com"},
-										},
-									},
-									PortMatrix: []PortCommAgg{
-										{
-											SrcPort: 50432,
-											DstPort: 443,
-											Phase: Phase{
-												Direction:  "egress",
-												InitatedBy: "local",
-												Status:     "completed",
-												EndedBy:    "remote",
-											},
-										},
-										{
-											SrcPort: 50433,
-											DstPort: 80,
-											Phase: Phase{
-												Direction:  "egress",
-												InitatedBy: "local",
-												Status:     "terminated",
-												EndedBy:    "local",
-											},
-										},
-									},
-								},
-							},
+					{
+						UUID: "file-002",
+						Path: "/srv/app/config.yaml",
+						Dir:  "/srv/app",
+						Base: "config.yaml",
+						Type: "regular",
+						Owner: FileOwner{
+							UID: 1000,
+							GID: 1000,
 						},
-						{
-							Proto: "icmp",
-							ICMPs: []ICMP{
-								{Type: "8", Code: "0"},
-							},
+						Actions: FileActions{
+							Actions: []string{"open", "read"},
+							Open:    true,
+							Read:    true,
+						},
+						Permissions: FilePermissions{
+							Mode:       "0644",
+							OwnerRead:  true,
+							OwnerWrite: true,
+							GroupRead:  true,
+							OtherRead:  true,
+						},
+						Metadata: FileMetadata{
+							Size:     2048,
+							Access:   time.Date(2026, 2, 12, 10, 14, 0, 0, time.UTC),
+							Change:   time.Date(2026, 2, 10, 12, 0, 0, 0, time.UTC),
+							Creation: time.Date(2026, 1, 20, 9, 0, 0, 0, time.UTC),
 						},
 					},
 				},
-				Containers: ContainerAggregate{
-					MntNamespaceIDs: []ContainerPair{
-						{Name: "mnt-namespace", ID: "mnt-123"},
+				Flows: []Flow{
+					{
+						UUID:      "flow-001",
+						IPVersion: 4,
+						Proto:     "tcp",
+						Local: Node{
+							Address: "10.0.0.5",
+							Name:    "build-agent",
+							Names:   []string{"build-agent.local"},
+							Port:    50432,
+						},
+						Remote: Node{
+							Address: "93.184.216.34",
+							Name:    "example.com",
+							Names:   []string{"example.com", "www.example.com"},
+							Port:    443,
+						},
+						ServicePort: 443,
+						Flags: Flags{
+							Egress:  true,
+							Started: true,
+							Ended:   true,
+						},
+						Phase: Phase{
+							Direction:  "egress",
+							InitatedBy: "local",
+							Status:     "completed",
+							EndedBy:    "remote",
+						},
 					},
-					PidNamespaceIDs: []ContainerPair{
-						{Name: "pid-namespace", ID: "pid-123"},
+					{
+						UUID:      "flow-002",
+						IPVersion: 4,
+						Proto:     "icmp",
+						ICMP: ICMP{
+							Type: "8",
+							Code: "0",
+						},
+						Local: Node{
+							Address: "10.0.0.5",
+							Port:    0,
+						},
+						Remote: Node{
+							Address: "10.0.0.10",
+							Port:    0,
+						},
+						Flags: Flags{
+							Egress:  true,
+							Started: true,
+						},
+						Phase: Phase{
+							Direction:  "egress",
+							InitatedBy: "local",
+							Status:     "ongoing",
+							EndedBy:    "",
+						},
 					},
-					UtsNamespaceIDs: []ContainerPair{
-						{Name: "uts-namespace", ID: "uts-123"},
-					},
-					IpcNamespaceIDs: []ContainerPair{
-						{Name: "ipc-namespace", ID: "ipc-123"},
-					},
-					NetNamespaceIDs: []ContainerPair{
-						{Name: "net-namespace", ID: "net-123"},
-					},
-					CgroupNamespaceIDs: []ContainerPair{
-						{Name: "cgroup-namespace", ID: "cgroup-123"},
-					},
+				},
+				Containers: Containers{
+					MntNamespaceIDs: []ContainerID{{Name: "mnt-namespace", ID: "mnt-123"}},
+					PidNamespaceIDs: []ContainerID{{Name: "pid-namespace", ID: "pid-123"}},
+					UtsNamespaceIDs: []ContainerID{{Name: "uts-namespace", ID: "uts-123"}},
+					IpcNamespaceIDs: []ContainerID{{Name: "ipc-namespace", ID: "ipc-123"}},
+					NetNamespaceIDs: []ContainerID{{Name: "net-namespace", ID: "net-123"}},
+					CgroupNamespaceIDs: []ContainerID{{
+						Name: "cgroup-namespace",
+						ID:   "cgroup-123",
+					}},
 					Containers: []Container{
 						{
-							ID:         "container-abc123",
-							Name:       "build-runner",
-							HostName:   "runner-host",
-							ImageID:    "sha256:deadbeef",
-							Image:      "ghcr.io/org/runner",
-							Version:    "1.2.3",
-							Runtime:    "containerd",
-							Driver:     "overlay2",
-							PID:        4242,
-							ExitCode:   137,
-							Status:     "running",
-							IsAttached: true,
-							Path:       "/usr/bin/runner",
-							Cwd:        "/workdir",
-							CreatedAt:  "2026-02-12T09:00:00Z",
-							StartedAt:  "2026-02-12T09:01:00Z",
-							FinishedAt: "2026-02-12T11:00:00Z",
-							Mounts: []Mount{
-								{Source: "/var/lib/runner", Destination: "/workdir", Type: "bind"},
-								{Source: "/var/run/docker.sock", Destination: "/var/run/docker.sock", Type: "bind"},
-							},
+							ID:           "container-abc123",
+							Name:         "build-runner",
+							HostName:     "runner-host",
+							ImageID:      "sha256:deadbeef",
+							Image:        "ghcr.io/org/runner",
+							Version:      "1.2.3",
+							Runtime:      "containerd",
+							Driver:       "overlay2",
+							PID:          4242,
+							ExitCode:     137,
+							Status:       "running",
+							IsAttached:   true,
+							Path:         "/usr/bin/runner",
+							Cwd:          "/workdir",
+							CreatedAt:    time.Date(2026, 2, 12, 9, 0, 0, 0, time.UTC),
+							StartedAt:    time.Date(2026, 2, 12, 9, 1, 0, 0, time.UTC),
+							FinishedAt:   time.Date(2026, 2, 12, 11, 0, 0, 0, time.UTC),
+							Mounts:       []Mount{{Source: "/var/lib/runner", Destination: "/workdir", Type: "bind"}},
 							NetworkMode:  "bridge",
 							CgroupnsMode: "private",
 							IpcMode:      "private",
@@ -264,8 +280,8 @@ func TestProfile(t *testing.T) {
 				},
 				Ancestry: []Process{
 					{
-						Start:      "2026-02-12T09:01:00Z",
-						Exit:       "2026-02-12T10:15:10Z",
+						Start:      time.Date(2026, 2, 12, 9, 1, 0, 0, time.UTC),
+						Exit:       time.Date(2026, 2, 12, 10, 15, 10, 0, time.UTC),
 						Code:       0,
 						UID:        1000,
 						Pid:        4321,
@@ -290,22 +306,19 @@ func TestProfile(t *testing.T) {
 						},
 					},
 					{
-						Start:      "2026-02-12T08:55:00Z",
-						Exit:       "2026-02-12T10:20:00Z",
-						Code:       0,
-						UID:        0,
-						Pid:        120,
-						Ppid:       1,
-						Comm:       "containerd",
-						Cmd:        "/usr/bin/containerd",
-						Exe:        "/usr/bin/containerd",
-						Args:       "--config /etc/containerd/config.toml",
-						Envs:       "PATH=/usr/bin",
-						Loader:     "/lib64/ld-linux-x86-64.so.2",
-						PrevExe:    "/sbin/init",
-						PrevArgs:   "",
-						PrevEnvs:   "",
-						PrevLoader: "",
+						Start:   time.Date(2026, 2, 12, 8, 55, 0, 0, time.UTC),
+						Exit:    time.Date(2026, 2, 12, 10, 20, 0, 0, time.UTC),
+						Code:    0,
+						UID:     0,
+						Pid:     120,
+						Ppid:    1,
+						Comm:    "containerd",
+						Cmd:     "/usr/bin/containerd",
+						Exe:     "/usr/bin/containerd",
+						Args:    "--config /etc/containerd/config.toml",
+						Envs:    "PATH=/usr/bin",
+						Loader:  "/lib64/ld-linux-x86-64.so.2",
+						PrevExe: "/sbin/init",
 						Namespaces: Namespaces{
 							MNTNs:    4026531840,
 							PIDNs:    4026531836,
@@ -455,8 +468,6 @@ func TestProfile(t *testing.T) {
 							},
 						},
 						RemoteGeoInfo: GeoIPLocation{
-							Latitude:      0.0,
-							Longitude:     0.0,
 							Continent:     "local",
 							ContinentCode: "LC",
 							Country:       "local",
@@ -479,7 +490,7 @@ func TestProfile(t *testing.T) {
 				ResultID: ResultNoBadEgressDomain,
 				Evidence: []Evidence{
 					{
-						Timestamp: "2026-02-12T10:14:58Z",
+						Timestamp: time.Date(2026, 2, 12, 10, 14, 58, 0, time.UTC),
 						EventName: "network_connection",
 						Peer: Peer{
 							Result:        ResultBad,
@@ -517,18 +528,9 @@ func TestProfile(t *testing.T) {
 		},
 		Telemetry: Telemetry{
 			Network: NetTelemetry{
-				Egress: DirectionNetTelemetry{
-					TotalDomains:     5,
-					TotalConnections: 20,
-				},
-				Ingress: DirectionNetTelemetry{
-					TotalDomains:     8,
-					TotalConnections: 10,
-				},
-				Local: DirectionNetTelemetry{
-					TotalDomains:     3,
-					TotalConnections: 15,
-				},
+				Egress:  DirectionNetTelemetry{TotalDomains: 5, TotalConnections: 20},
+				Ingress: DirectionNetTelemetry{TotalDomains: 8, TotalConnections: 10},
+				Local:   DirectionNetTelemetry{TotalDomains: 3, TotalConnections: 15},
 			},
 		},
 	}
