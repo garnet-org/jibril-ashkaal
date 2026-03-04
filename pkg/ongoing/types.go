@@ -319,12 +319,12 @@ func (a Attenuator) MarshalJSON() ([]byte, error) {
 // Context.
 
 type Background struct {
-	// Files      FileAggregate      `json:"files"`
-	// Flows      FlowAggregate      `json:"flows"`
-	Files      []File     `json:"files"`
-	Flows      []Flow     `json:"flows"`
-	Containers Containers `json:"containers"`
-	Ancestry   []Process  `json:"ancestry"`
+	Containers  Containers    `json:"containers"`
+	Files       []File        `json:"file_list"`
+	Flows       []Flow        `json:"flow_list"`
+	Ancestry    []Process     `json:"ancestry"`
+	LegacyFiles FileAggregate `json:"files"` // TODO: Remove this field.
+	LegacyFlows FlowAggregate `json:"flows"` // TODO: Remove this field.
 }
 
 func (b Background) Clone() Background {
@@ -335,20 +335,22 @@ func (b Background) Clone() Background {
 	flows := make([]Flow, len(b.Flows))
 	copy(flows, b.Flows)
 	return Background{
-		// Files:      b.Files.Clone(),
-		// Flows:      b.Flows.Clone(),
-		Files:      files,
-		Flows:      flows,
-		Containers: b.Containers.Clone(),
-		Ancestry:   ancestry,
+		Containers:  b.Containers.Clone(),
+		Files:       files,
+		Flows:       flows,
+		Ancestry:    ancestry,
+		LegacyFiles: b.LegacyFiles.Clone(),
+		LegacyFlows: b.LegacyFlows.Clone(),
 	}
 }
 
 func (b Background) IsZero() bool {
-	return len(b.Files) == 0 &&
+	return b.Containers.IsZero() &&
+		len(b.Files) == 0 &&
 		len(b.Flows) == 0 &&
-		b.Containers.IsZero() &&
-		len(b.Ancestry) == 0
+		len(b.Ancestry) == 0 &&
+		b.LegacyFiles.IsZero() &&
+		b.LegacyFlows.IsZero()
 }
 
 func (b Background) MarshalJSON() ([]byte, error) {
@@ -357,10 +359,12 @@ func (b Background) MarshalJSON() ([]byte, error) {
 	}
 
 	created := struct {
-		Containers *Containers `json:"containers,omitempty"`
-		Files      []File      `json:"files,omitempty"`
-		Flows      []Flow      `json:"flows,omitempty"`
-		Ancestry   []Process   `json:"ancestry,omitempty"`
+		Containers  *Containers    `json:"containers,omitempty"`
+		Files       []File         `json:"file_list,omitempty"`
+		Flows       []Flow         `json:"flow_list,omitempty"`
+		Ancestry    []Process      `json:"ancestry,omitempty"`
+		LegacyFiles *FileAggregate `json:"files,omitempty"`
+		LegacyFlows *FlowAggregate `json:"flows,omitempty"`
 	}{
 		Files:    b.Files,
 		Flows:    b.Flows,
@@ -370,6 +374,12 @@ func (b Background) MarshalJSON() ([]byte, error) {
 	// Only makes sense to include the full type if sub-type is not empty.
 	if !b.Containers.IsZero() && len(b.Containers.Containers) > 0 {
 		created.Containers = &b.Containers
+	}
+	if !b.LegacyFiles.IsZero() {
+		created.LegacyFiles = &b.LegacyFiles
+	}
+	if !b.LegacyFlows.IsZero() {
+		created.LegacyFlows = &b.LegacyFlows
 	}
 
 	return json.Marshal(created)
