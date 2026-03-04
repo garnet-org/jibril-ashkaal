@@ -358,6 +358,11 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
+	hasNewFiles := len(b.Files) > 0
+	hasNewFlows := len(b.Flows) > 0
+	hasLegacyFiles := !b.LegacyFiles.IsZero()
+	hasLegacyFlows := !b.LegacyFlows.IsZero()
+
 	created := struct {
 		Containers  *Containers    `json:"containers,omitempty"`
 		Files       []File         `json:"file_list,omitempty"`
@@ -366,8 +371,6 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		LegacyFiles *FileAggregate `json:"files,omitempty"`
 		LegacyFlows *FlowAggregate `json:"flows,omitempty"`
 	}{
-		Files:    b.Files,
-		Flows:    b.Flows,
 		Ancestry: b.Ancestry,
 	}
 
@@ -375,10 +378,16 @@ func (b Background) MarshalJSON() ([]byte, error) {
 	if !b.Containers.IsZero() && len(b.Containers.Containers) > 0 {
 		created.Containers = &b.Containers
 	}
-	if !b.LegacyFiles.IsZero() {
+
+	if hasNewFiles {
+		created.Files = b.Files
+	} else if hasLegacyFiles {
 		created.LegacyFiles = &b.LegacyFiles
 	}
-	if !b.LegacyFlows.IsZero() {
+
+	if hasNewFlows {
+		created.Flows = b.Flows
+	} else if hasLegacyFlows {
 		created.LegacyFlows = &b.LegacyFlows
 	}
 
