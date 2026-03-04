@@ -4,20 +4,25 @@ import (
 	"encoding/json"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // All detection events have these fields.
 
 type Base struct {
-	UUID       string     `json:"uuid"`       // The unique ID of the detection.
-	Timestamp  string     `json:"timestamp"`  // The timestamp of the detection.
-	Note       string     `json:"note"`       // A note about the detection.
-	Metadata   Metadata   `json:"metadata"`   // The detection metadata.
-	Attenuator Attenuator `json:"attenuator"` // The attenuator of the detection.
-	Score      Score      `json:"score"`      // Detection Security Risk Score.
-	Background Background `json:"background"` // The detection context.
+	UUID       string     `json:"uuid"`       // The unique ID of the event.
+	Timestamp  time.Time  `json:"timestamp"`  // The timestamp of the event.
+	Note       string     `json:"note"`       // A note about the event.
+	Metadata   Metadata   `json:"metadata"`   // The event metadata.
+	Attenuator Attenuator `json:"attenuator"` // The attenuator of the event.
+	Score      Score      `json:"score"`      // Event Security Risk Score.
+	Background Background `json:"background"` // The event context.
 	Scenarios  Scenarios  `json:"scenarios"`  // GitHub, Kubernetes, Host, etc.
 }
+
+// NOTE: Multiple events with the same UUID are typically treated as the same event, but
+// with increasingly complete context. Keeping only the most recent event is a reasonable
+// approach. However, if possible, merging the context of all such events is ideal.
 
 func (b Base) Clone() Base {
 	return Base{
@@ -34,7 +39,7 @@ func (b Base) Clone() Base {
 
 func (b Base) IsZero() bool {
 	return b.UUID == "" &&
-		b.Timestamp == "" &&
+		b.Timestamp.IsZero() &&
 		b.Note == "" &&
 		b.Metadata.IsZero() &&
 		b.Attenuator.IsZero() &&
@@ -48,39 +53,38 @@ func (b Base) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["uuid"] = b.UUID
-	result["timestamp"] = b.Timestamp
-
-	// Omit empty fields.
-	if b.Note != "" {
-		result["note"] = b.Note
+	created := struct {
+		UUID       string      `json:"uuid"`
+		Timestamp  time.Time   `json:"timestamp"`
+		Note       string      `json:"note,omitempty"`
+		Metadata   *Metadata   `json:"metadata,omitempty"`
+		Attenuator *Attenuator `json:"attenuator,omitempty"`
+		Score      *Score      `json:"score,omitempty"`
+		Background *Background `json:"background,omitempty"`
+		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
+	}{
+		UUID:      b.UUID,
+		Timestamp: b.Timestamp,
+		Note:      b.Note,
 	}
+
 	if !b.Metadata.IsZero() {
-		result["metadata"] = b.Metadata
+		created.Metadata = &b.Metadata
 	}
 	if !b.Attenuator.IsZero() {
-		result["attenuator"] = b.Attenuator
+		created.Attenuator = &b.Attenuator
 	}
 	if !b.Score.IsZero() {
-		result["score"] = b.Score
+		created.Score = &b.Score
 	}
 	if !b.Background.IsZero() {
-		result["background"] = b.Background
+		created.Background = &b.Background
 	}
 	if !b.Scenarios.IsZero() {
-		scenariosMap, err := b.Scenarios.MarshalJSONMap()
-		if err != nil {
-			return nil, err
-		}
-		if scenariosMap != nil {
-			result["scenarios"] = scenariosMap
-		}
+		created.Scenarios = &b.Scenarios
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 func (b Base) MarshalJSONMap() (map[string]any, error) {
@@ -121,22 +125,6 @@ func (b Base) MarshalJSONMap() (map[string]any, error) {
 	}
 
 	return result, nil
-}
-
-func (b Base) SetScore(score Score) {
-	b.Score = score
-}
-
-func (b Base) GetScore() Score {
-	return b.Score
-}
-
-func (b Base) SetAttenuator(attenuator Attenuator) {
-	b.Attenuator = attenuator
-}
-
-func (b Base) GetAttenuator() Attenuator {
-	return b.Attenuator
 }
 
 // Detection Event Metadata.
@@ -187,35 +175,29 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["kind"] = m.Kind
-	result["name"] = m.Name
-	result["format"] = m.Format
-	result["version"] = m.Version
-
-	// Omit empty fields.
-	if m.Description != "" {
-		result["description"] = m.Description
-	}
-	if m.Tactic != "" {
-		result["tactic"] = m.Tactic
-	}
-	if m.Technique != "" {
-		result["technique"] = m.Technique
-	}
-	if m.SubTechnique != "" {
-		result["subtechnique"] = m.SubTechnique
-	}
-	if m.Importance != "" {
-		result["importance"] = m.Importance
-	}
-	if m.Documentation != "" {
-		result["documentation"] = m.Documentation
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Kind          string `json:"kind"`
+		Name          string `json:"name"`
+		Format        string `json:"format"`
+		Version       string `json:"version"`
+		Description   string `json:"description,omitempty"`
+		Tactic        string `json:"tactic,omitempty"`
+		Technique     string `json:"technique,omitempty"`
+		SubTechnique  string `json:"subtechnique,omitempty"`
+		Importance    string `json:"importance,omitempty"`
+		Documentation string `json:"documentation,omitempty"`
+	}{
+		Kind:          m.Kind,
+		Name:          m.Name,
+		Format:        m.Format,
+		Version:       m.Version,
+		Description:   m.Description,
+		Tactic:        m.Tactic,
+		Technique:     m.Technique,
+		SubTechnique:  m.SubTechnique,
+		Importance:    m.Importance,
+		Documentation: m.Documentation,
+	})
 }
 
 // Security Risk Score.
@@ -240,8 +222,6 @@ func (s Score) Clone() Score {
 	}
 }
 
-// IsZero checks if Score is empty.
-// Returns true if all fields have zero values.
 func (s Score) IsZero() bool {
 	return s.Source == "" &&
 		s.Severity == 0 &&
@@ -251,44 +231,26 @@ func (s Score) IsZero() bool {
 		len(s.Reasons) == 0
 }
 
-// MarshalJSON implements json.Marshaler.
-//
-// MarshalJSON ensures that an empty Score is serialized
-// as null. All valid severity levels including "none" are
-// properly serialized to their corresponding string values.
-// SeverityLevel should not be empty.
-//
-// RiskScore must be calculated if severity_level != "none".
-// When RiskScore is zero, it is omitted from JSON. This includes
-// the case where severity_level == "none", meaning no security impact.
-//
-// Always check severity and severity_level before risk_score.
 func (s Score) MarshalJSON() ([]byte, error) {
 	if s.IsZero() {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["source"] = s.Source
-	result["severity"] = s.Severity
-	result["severity_level"] = s.SeverityLevel
-	result["confidence"] = s.Confidence
-
-	// RiskScore must be calculated if severity_level != "none".
-	// if severity_level == "none" then it probably means no
-	// security impact, so no risk. In this case risk_score is not
-	// serialized.
-	if s.RiskScore != 0 {
-		result["risk_score"] = s.RiskScore
-	}
-
-	if len(s.Reasons) > 0 {
-		result["reasons"] = s.Reasons
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Source        string   `json:"source"`
+		Severity      int      `json:"severity"`
+		SeverityLevel string   `json:"severity_level"`
+		Confidence    float64  `json:"confidence"`
+		RiskScore     float64  `json:"risk_score,omitempty"`
+		Reasons       []string `json:"reasons,omitempty"`
+	}{
+		Source:        s.Source,
+		Severity:      s.Severity,
+		SeverityLevel: s.SeverityLevel,
+		Confidence:    s.Confidence,
+		RiskScore:     s.RiskScore,
+		Reasons:       s.Reasons,
+	})
 }
 
 // Attenuator.
@@ -333,48 +295,58 @@ func (a Attenuator) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["attenuated_by"] = a.AttenuatedBy
-	result["interpretation"] = a.Interpretation
-	result["is_false_positive"] = a.IsFalsePositive
-	result["new_severity"] = a.NewSeverity
-	result["new_severity_level"] = a.NewSeverityLevel
-	result["new_confidence"] = a.NewConfidence
-	result["new_risk_score"] = a.NewRiskScore
-
-	// Omit empty fields.
-	if a.Thinking != "" {
-		result["thinking"] = a.Thinking
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		AttenuatedBy     string  `json:"attenuated_by"`
+		Interpretation   string  `json:"interpretation"`
+		Thinking         string  `json:"thinking,omitempty"`
+		IsFalsePositive  bool    `json:"is_false_positive"`
+		NewSeverity      int     `json:"new_severity"`
+		NewSeverityLevel string  `json:"new_severity_level"`
+		NewConfidence    float64 `json:"new_confidence"`
+		NewRiskScore     float64 `json:"new_risk_score"`
+	}{
+		AttenuatedBy:     a.AttenuatedBy,
+		Interpretation:   a.Interpretation,
+		Thinking:         a.Thinking,
+		IsFalsePositive:  a.IsFalsePositive,
+		NewSeverity:      a.NewSeverity,
+		NewSeverityLevel: a.NewSeverityLevel,
+		NewConfidence:    a.NewConfidence,
+		NewRiskScore:     a.NewRiskScore,
+	})
 }
 
 // Context.
 
 type Background struct {
-	Files      FileAggregate      `json:"files"`
-	Flows      FlowAggregate      `json:"flows"`
-	Containers ContainerAggregate `json:"containers"`
-	Ancestry   []Process          `json:"ancestry"`
+	// Files      FileAggregate      `json:"files"`
+	// Flows      FlowAggregate      `json:"flows"`
+	Files      []File     `json:"files"`
+	Flows      []Flow     `json:"flows"`
+	Containers Containers `json:"containers"`
+	Ancestry   []Process  `json:"ancestry"`
 }
 
 func (b Background) Clone() Background {
 	ancestry := make([]Process, len(b.Ancestry))
 	copy(ancestry, b.Ancestry)
+	files := make([]File, len(b.Files))
+	copy(files, b.Files)
+	flows := make([]Flow, len(b.Flows))
+	copy(flows, b.Flows)
 	return Background{
-		Files:      b.Files.Clone(),
-		Flows:      b.Flows.Clone(),
+		// Files:      b.Files.Clone(),
+		// Flows:      b.Flows.Clone(),
+		Files:      files,
+		Flows:      flows,
 		Containers: b.Containers.Clone(),
 		Ancestry:   ancestry,
 	}
 }
 
 func (b Background) IsZero() bool {
-	return b.Files.IsZero() &&
-		b.Flows.IsZero() &&
+	return len(b.Files) == 0 &&
+		len(b.Flows) == 0 &&
 		b.Containers.IsZero() &&
 		len(b.Ancestry) == 0
 }
@@ -384,41 +356,43 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Omit empty fields.
-	if !b.Files.IsZero() {
-		result["files"] = b.Files
-	}
-	if !b.Flows.IsZero() {
-		result["flows"] = b.Flows
-	}
-	if !b.Containers.IsZero() {
-		result["containers"] = b.Containers
-	}
-	if len(b.Ancestry) > 0 {
-		result["ancestry"] = b.Ancestry
+	created := struct {
+		Containers *Containers `json:"containers,omitempty"`
+		Files      []File      `json:"files,omitempty"`
+		Flows      []Flow      `json:"flows,omitempty"`
+		Ancestry   []Process   `json:"ancestry,omitempty"`
+	}{
+		Files:    b.Files,
+		Flows:    b.Flows,
+		Ancestry: b.Ancestry,
 	}
 
-	return json.Marshal(result)
+	// Only makes sense to include the full type if sub-type is not empty.
+	if !b.Containers.IsZero() && len(b.Containers.Containers) > 0 {
+		created.Containers = &b.Containers
+	}
+
+	return json.Marshal(created)
 }
 
 // File Access Detection Event.
 
 type FileAccess struct {
 	Base
-	File File `json:"file"`
+	File    File    `json:"file"`    // File accessed by the process.
+	Process Process `json:"process"` // Process that accessed the file.
 }
 
 func (f FileAccess) Clone() FileAccess {
 	return FileAccess{
-		Base: f.Base.Clone(),
-		File: f.File.Clone(),
+		Base:    f.Base.Clone(),
+		File:    f.File.Clone(),
+		Process: f.Process.Clone(),
 	}
 }
 
 func (f FileAccess) IsZero() bool {
-	return f.Base.IsZero() && f.File.IsZero()
+	return f.Base.IsZero() && f.File.IsZero() && f.Process.IsZero()
 }
 
 func (f FileAccess) MarshalJSON() ([]byte, error) {
@@ -426,42 +400,72 @@ func (f FileAccess) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID       *string     `json:"uuid,omitempty"`
+		Timestamp  *time.Time  `json:"timestamp,omitempty"`
+		Note       *string     `json:"note,omitempty"`
+		Metadata   *Metadata   `json:"metadata,omitempty"`
+		Attenuator *Attenuator `json:"attenuator,omitempty"`
+		Score      *Score      `json:"score,omitempty"`
+		Background *Background `json:"background,omitempty"`
+		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
+
+		File    *File    `json:"file,omitempty"`
+		Process *Process `json:"process,omitempty"`
+	}{}
 
 	if !f.Base.IsZero() {
-		baseMap, err := f.Base.MarshalJSONMap()
-		if err != nil {
-			return nil, err
+		created.UUID = &f.Base.UUID
+		created.Timestamp = &f.Base.Timestamp
+
+		if f.Base.Note != "" {
+			created.Note = &f.Base.Note
 		}
-		for k, v := range baseMap {
-			result[k] = v
+		if !f.Base.Metadata.IsZero() {
+			created.Metadata = &f.Base.Metadata
+		}
+		if !f.Base.Attenuator.IsZero() {
+			created.Attenuator = &f.Base.Attenuator
+		}
+		if !f.Base.Score.IsZero() {
+			created.Score = &f.Base.Score
+		}
+		if !f.Base.Background.IsZero() {
+			created.Background = &f.Base.Background
+		}
+		if !f.Base.Scenarios.IsZero() {
+			created.Scenarios = &f.Base.Scenarios
 		}
 	}
 
-	// Omit empty fields.
 	if !f.File.IsZero() {
-		result["file"] = f.File
+		created.File = &f.File
+	}
+	if !f.Process.IsZero() {
+		created.Process = &f.Process
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // Execution Detection Event.
 
 type Execution struct {
 	Base
+	File    File    `json:"file"`
 	Process Process `json:"process"`
 }
 
 func (e Execution) Clone() Execution {
 	return Execution{
 		Base:    e.Base.Clone(),
+		File:    e.File.Clone(),
 		Process: e.Process.Clone(),
 	}
 }
 
 func (e Execution) IsZero() bool {
-	return e.Base.IsZero() && e.Process.IsZero()
+	return e.Base.IsZero() && e.File.IsZero() && e.Process.IsZero()
 }
 
 func (e Execution) MarshalJSON() ([]byte, error) {
@@ -469,42 +473,72 @@ func (e Execution) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID       *string     `json:"uuid,omitempty"`
+		Timestamp  *time.Time  `json:"timestamp,omitempty"`
+		Note       *string     `json:"note,omitempty"`
+		Metadata   *Metadata   `json:"metadata,omitempty"`
+		Attenuator *Attenuator `json:"attenuator,omitempty"`
+		Score      *Score      `json:"score,omitempty"`
+		Background *Background `json:"background,omitempty"`
+		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
+
+		File    *File    `json:"file,omitempty"`
+		Process *Process `json:"process,omitempty"`
+	}{}
 
 	if !e.Base.IsZero() {
-		baseMap, err := e.Base.MarshalJSONMap()
-		if err != nil {
-			return nil, err
+		created.UUID = &e.Base.UUID
+		created.Timestamp = &e.Base.Timestamp
+
+		if e.Base.Note != "" {
+			created.Note = &e.Base.Note
 		}
-		for k, v := range baseMap {
-			result[k] = v
+		if !e.Base.Metadata.IsZero() {
+			created.Metadata = &e.Base.Metadata
+		}
+		if !e.Base.Attenuator.IsZero() {
+			created.Attenuator = &e.Base.Attenuator
+		}
+		if !e.Base.Score.IsZero() {
+			created.Score = &e.Base.Score
+		}
+		if !e.Base.Background.IsZero() {
+			created.Background = &e.Base.Background
+		}
+		if !e.Base.Scenarios.IsZero() {
+			created.Scenarios = &e.Base.Scenarios
 		}
 	}
 
-	// Omit empty fields.
+	if !e.File.IsZero() {
+		created.File = &e.File
+	}
 	if !e.Process.IsZero() {
-		result["process"] = e.Process
+		created.Process = &e.Process
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // Network Peers Detection Event.
 
 type NetworkPeer struct {
 	Base
-	Flow Flow `json:"flow"`
+	Process Process `json:"process"` // Process triggering the detection with the flow.
+	Flow    Flow    `json:"flow"`    // Network flow triggering the detection.
 }
 
 func (n NetworkPeer) Clone() NetworkPeer {
 	return NetworkPeer{
-		Base: n.Base.Clone(),
-		Flow: n.Flow.Clone(),
+		Base:    n.Base.Clone(),
+		Process: n.Process.Clone(),
+		Flow:    n.Flow.Clone(),
 	}
 }
 
 func (n NetworkPeer) IsZero() bool {
-	return n.Base.IsZero() && n.Flow.IsZero()
+	return n.Base.IsZero() && n.Process.IsZero() && n.Flow.IsZero()
 }
 
 func (n NetworkPeer) MarshalJSON() ([]byte, error) {
@@ -512,42 +546,72 @@ func (n NetworkPeer) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID       *string     `json:"uuid,omitempty"`
+		Timestamp  *time.Time  `json:"timestamp,omitempty"`
+		Note       *string     `json:"note,omitempty"`
+		Metadata   *Metadata   `json:"metadata,omitempty"`
+		Attenuator *Attenuator `json:"attenuator,omitempty"`
+		Score      *Score      `json:"score,omitempty"`
+		Background *Background `json:"background,omitempty"`
+		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
+
+		Process *Process `json:"process,omitempty"`
+		Flow    *Flow    `json:"flow,omitempty"`
+	}{}
 
 	if !n.Base.IsZero() {
-		baseMap, err := n.Base.MarshalJSONMap()
-		if err != nil {
-			return nil, err
+		created.UUID = &n.Base.UUID
+		created.Timestamp = &n.Base.Timestamp
+
+		if n.Base.Note != "" {
+			created.Note = &n.Base.Note
 		}
-		for k, v := range baseMap {
-			result[k] = v
+		if !n.Base.Metadata.IsZero() {
+			created.Metadata = &n.Base.Metadata
+		}
+		if !n.Base.Attenuator.IsZero() {
+			created.Attenuator = &n.Base.Attenuator
+		}
+		if !n.Base.Score.IsZero() {
+			created.Score = &n.Base.Score
+		}
+		if !n.Base.Background.IsZero() {
+			created.Background = &n.Base.Background
+		}
+		if !n.Base.Scenarios.IsZero() {
+			created.Scenarios = &n.Base.Scenarios
 		}
 	}
 
-	// Omit empty fields.
+	if !n.Process.IsZero() {
+		created.Process = &n.Process
+	}
 	if !n.Flow.IsZero() {
-		result["flow"] = n.Flow
+		created.Flow = &n.Flow
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // Network Flow Event.
 
 type NetworkFlow struct {
 	Base
-	Flow Flow `json:"flow"`
+	Process Process `json:"process"`
+	Flow    Flow    `json:"flow"`
 }
 
 func (n NetworkFlow) Clone() NetworkFlow {
 	return NetworkFlow{
-		Base: n.Base.Clone(),
-		Flow: n.Flow.Clone(),
+		Base:    n.Base.Clone(),
+		Process: n.Process.Clone(),
+		Flow:    n.Flow.Clone(),
 	}
 }
 
 func (n NetworkFlow) IsZero() bool {
-	return n.Base.IsZero() && n.Flow.IsZero()
+	return n.Base.IsZero() && n.Process.IsZero() && n.Flow.IsZero()
 }
 
 func (n NetworkFlow) MarshalJSON() ([]byte, error) {
@@ -555,33 +619,61 @@ func (n NetworkFlow) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID       *string     `json:"uuid,omitempty"`
+		Timestamp  *time.Time  `json:"timestamp,omitempty"`
+		Note       *string     `json:"note,omitempty"`
+		Metadata   *Metadata   `json:"metadata,omitempty"`
+		Attenuator *Attenuator `json:"attenuator,omitempty"`
+		Score      *Score      `json:"score,omitempty"`
+		Background *Background `json:"background,omitempty"`
+		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
+
+		Process *Process `json:"process,omitempty"`
+		Flow    *Flow    `json:"flow,omitempty"`
+	}{}
 
 	if !n.Base.IsZero() {
-		baseMap, err := n.Base.MarshalJSONMap()
-		if err != nil {
-			return nil, err
+		created.UUID = &n.Base.UUID
+		created.Timestamp = &n.Base.Timestamp
+		if n.Base.Note != "" {
+			created.Note = &n.Base.Note
 		}
-		for k, v := range baseMap {
-			result[k] = v
+		if !n.Base.Metadata.IsZero() {
+			created.Metadata = &n.Base.Metadata
+		}
+		if !n.Base.Attenuator.IsZero() {
+			created.Attenuator = &n.Base.Attenuator
+		}
+		if !n.Base.Score.IsZero() {
+			created.Score = &n.Base.Score
+		}
+		if !n.Base.Background.IsZero() {
+			created.Background = &n.Base.Background
+		}
+		if !n.Base.Scenarios.IsZero() {
+			created.Scenarios = &n.Base.Scenarios
 		}
 	}
 
-	// Omit empty fields.
+	if !n.Process.IsZero() {
+		created.Process = &n.Process
+	}
 	if !n.Flow.IsZero() {
-		result["flow"] = n.Flow
+		created.Flow = &n.Flow
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // Drop IP Detection Event.
 
 type DropIP struct {
 	Base
-	IP    string   `json:"ip"`    // The IP that was dropped.
-	Names []string `json:"names"` // The names of the IP.
-	Flow  Flow     `json:"flow"`  // The flow that triggered the drop.
+	IP      string   `json:"ip"`      // The IP that was dropped.
+	Names   []string `json:"names"`   // The names of the IP.
+	Process Process  `json:"process"` // Process that triggered the drop.
+	Flow    Flow     `json:"flow"`    // The flow that triggered the drop.
 }
 
 func (d DropIP) Clone() DropIP {
@@ -605,37 +697,64 @@ func (d DropIP) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID       *string     `json:"uuid,omitempty"`
+		Timestamp  *time.Time  `json:"timestamp,omitempty"`
+		Note       *string     `json:"note,omitempty"`
+		Metadata   *Metadata   `json:"metadata,omitempty"`
+		Attenuator *Attenuator `json:"attenuator,omitempty"`
+		Score      *Score      `json:"score,omitempty"`
+		Background *Background `json:"background,omitempty"`
+		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
+
+		IP      string   `json:"ip,omitempty"`
+		Names   []string `json:"names,omitempty"`
+		Process *Process `json:"process,omitempty"`
+		Flow    *Flow    `json:"flow,omitempty"`
+	}{
+		IP:    d.IP,
+		Names: d.Names,
+	}
 
 	if !d.Base.IsZero() {
-		baseMap, err := d.Base.MarshalJSONMap()
-		if err != nil {
-			return nil, err
+		created.UUID = &d.Base.UUID
+		created.Timestamp = &d.Base.Timestamp
+		if d.Base.Note != "" {
+			created.Note = &d.Base.Note
 		}
-		for k, v := range baseMap {
-			result[k] = v
+		if !d.Base.Metadata.IsZero() {
+			created.Metadata = &d.Base.Metadata
+		}
+		if !d.Base.Attenuator.IsZero() {
+			created.Attenuator = &d.Base.Attenuator
+		}
+		if !d.Base.Score.IsZero() {
+			created.Score = &d.Base.Score
+		}
+		if !d.Base.Background.IsZero() {
+			created.Background = &d.Base.Background
+		}
+		if !d.Base.Scenarios.IsZero() {
+			created.Scenarios = &d.Base.Scenarios
 		}
 	}
 
-	// Omit empty fields.
-	if d.IP != "" {
-		result["ip"] = d.IP
-	}
-	if len(d.Names) > 0 {
-		result["names"] = d.Names
+	if !d.Process.IsZero() {
+		created.Process = &d.Process
 	}
 	if !d.Flow.IsZero() {
-		result["flow"] = d.Flow
+		created.Flow = &d.Flow
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // Process.
 
 type Process struct {
-	Start      string     `json:"start"`       // The start time of the process.
-	Exit       string     `json:"exit"`        // The exit time of the process.
+	UUID       string     `json:"uuid"`        // Unique ID of the process.
+	Start      time.Time  `json:"start"`       // The start time of the process.
+	Exit       time.Time  `json:"exit"`        // The exit time of the process.
 	Code       int        `json:"retcode"`     // The return code of the process.
 	UID        uint       `json:"uid"`         // The user ID of the process.
 	Pid        int        `json:"pid"`         // The process ID.
@@ -651,6 +770,18 @@ type Process struct {
 	PrevEnvs   string     `json:"prev_envs"`   // The previous environment variables.
 	PrevLoader string     `json:"prev_loader"` // The previous loader name.
 	Namespaces Namespaces `json:"namespaces"`  // The namespaces.
+	// Hashes for external indexing amongst other ongoing events.
+	ProcessHash    uint32 `json:"process_hash"`     // The hash of the process.
+	ParentHash     uint32 `json:"parent_hash"`      // The hash of the parent process.
+	CommHash       uint32 `json:"comm_hash"`        // The hash of the command.
+	ExeHash        uint32 `json:"exe_hash"`         // The hash of the executable.
+	ArgsHash       uint32 `json:"args_hash"`        // The hash of the arguments.
+	EnvsHash       uint32 `json:"envs_hash"`        // The hash of the environment variables.
+	LoaderHash     uint32 `json:"loader_hash"`      // The hash of the loader.
+	PrevExeHash    uint32 `json:"prev_exe_hash"`    // The hash of the previous executable.
+	PrevArgsHash   uint32 `json:"prev_args_hash"`   // The hash of the previous arguments.
+	PrevEnvsHash   uint32 `json:"prev_envs_hash"`   // The hash of the previous environment variables.
+	PrevLoaderHash uint32 `json:"prev_loader_hash"` // The hash of the previous loader.
 }
 
 func (p Process) Clone() Process {
@@ -658,8 +789,9 @@ func (p Process) Clone() Process {
 }
 
 func (p Process) IsZero() bool {
-	return p.Start == "" &&
-		p.Exit == "" &&
+	return p.UUID == "" &&
+		p.Start.IsZero() &&
+		p.Exit.IsZero() &&
 		p.Code == 0 &&
 		p.UID == 0 &&
 		p.Pid == 0 &&
@@ -674,7 +806,18 @@ func (p Process) IsZero() bool {
 		p.PrevArgs == "" &&
 		p.PrevEnvs == "" &&
 		p.PrevLoader == "" &&
-		p.Namespaces.IsZero()
+		p.Namespaces.IsZero() &&
+		p.ProcessHash == 0 &&
+		p.ParentHash == 0 &&
+		p.CommHash == 0 &&
+		p.ExeHash == 0 &&
+		p.ArgsHash == 0 &&
+		p.EnvsHash == 0 &&
+		p.LoaderHash == 0 &&
+		p.PrevExeHash == 0 &&
+		p.PrevArgsHash == 0 &&
+		p.PrevEnvsHash == 0 &&
+		p.PrevLoaderHash == 0
 }
 
 func (p Process) MarshalJSON() ([]byte, error) {
@@ -682,46 +825,72 @@ func (p Process) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID           string      `json:"uuid"`
+		Start          time.Time   `json:"start"`
+		Exit           time.Time   `json:"exit"`
+		Code           int         `json:"retcode"`
+		UID            uint        `json:"uid"`
+		Pid            int         `json:"pid"`
+		Ppid           int         `json:"ppid"`
+		Comm           string      `json:"comm"`
+		Cmd            string      `json:"cmd"`
+		Exe            string      `json:"exe"`
+		Args           string      `json:"args,omitempty"`
+		Envs           string      `json:"envs,omitempty"`
+		Loader         string      `json:"loader,omitempty"`
+		PrevExe        string      `json:"prev_exe,omitempty"`
+		PrevArgs       string      `json:"prev_args,omitempty"`
+		PrevEnvs       string      `json:"prev_envs,omitempty"`
+		PrevLoader     string      `json:"prev_loader,omitempty"`
+		Namespaces     *Namespaces `json:"namespaces,omitempty"`
+		ProcessHash    uint32      `json:"process_hash,omitempty"`
+		ParentHash     uint32      `json:"parent_hash,omitempty"`
+		CommHash       uint32      `json:"comm_hash,omitempty"`
+		ExeHash        uint32      `json:"exe_hash,omitempty"`
+		ArgsHash       uint32      `json:"args_hash,omitempty"`
+		EnvsHash       uint32      `json:"envs_hash,omitempty"`
+		LoaderHash     uint32      `json:"loader_hash,omitempty"`
+		PrevExeHash    uint32      `json:"prev_exe_hash,omitempty"`
+		PrevArgsHash   uint32      `json:"prev_args_hash,omitempty"`
+		PrevEnvsHash   uint32      `json:"prev_envs_hash,omitempty"`
+		PrevLoaderHash uint32      `json:"prev_loader_hash,omitempty"`
+	}{
+		UUID:           p.UUID,
+		Start:          p.Start,
+		Exit:           p.Exit,
+		Code:           p.Code,
+		UID:            p.UID,
+		Pid:            p.Pid,
+		Ppid:           p.Ppid,
+		Comm:           p.Comm,
+		Cmd:            p.Cmd,
+		Exe:            p.Exe,
+		Args:           p.Args,
+		Envs:           p.Envs,
+		Loader:         p.Loader,
+		PrevExe:        p.PrevExe,
+		PrevArgs:       p.PrevArgs,
+		PrevEnvs:       p.PrevEnvs,
+		PrevLoader:     p.PrevLoader,
+		ProcessHash:    p.ProcessHash,
+		ParentHash:     p.ParentHash,
+		CommHash:       p.CommHash,
+		ExeHash:        p.ExeHash,
+		ArgsHash:       p.ArgsHash,
+		EnvsHash:       p.EnvsHash,
+		LoaderHash:     p.LoaderHash,
+		PrevExeHash:    p.PrevExeHash,
+		PrevArgsHash:   p.PrevArgsHash,
+		PrevEnvsHash:   p.PrevEnvsHash,
+		PrevLoaderHash: p.PrevLoaderHash,
+	}
 
-	// Always included fields.
-	result["start"] = p.Start
-	result["exit"] = p.Exit
-	result["retcode"] = p.Code
-	result["uid"] = p.UID
-	result["pid"] = p.Pid
-	result["ppid"] = p.Ppid
-	result["comm"] = p.Comm
-	result["cmd"] = p.Cmd
-	result["exe"] = p.Exe
-
-	// Omit empty fields.
-	if p.Args != "" {
-		result["args"] = p.Args
-	}
-	if p.Envs != "" {
-		result["envs"] = p.Envs
-	}
-	if p.Loader != "" {
-		result["loader"] = p.Loader
-	}
-	if p.PrevExe != "" {
-		result["prev_exe"] = p.PrevExe
-	}
-	if p.PrevArgs != "" {
-		result["prev_args"] = p.PrevArgs
-	}
-	if p.PrevEnvs != "" {
-		result["prev_envs"] = p.PrevEnvs
-	}
-	if p.PrevLoader != "" {
-		result["prev_loader"] = p.PrevLoader
-	}
 	if !p.Namespaces.IsZero() {
-		result["namespaces"] = p.Namespaces
+		created.Namespaces = &p.Namespaces
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // Namespaces.
@@ -749,35 +918,27 @@ func (n Namespaces) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Omit empty fields.
-	if n.MNTNs != 0 {
-		result["mnt_ns"] = n.MNTNs
-	}
-	if n.PIDNs != 0 {
-		result["pid_ns"] = n.PIDNs
-	}
-	if n.UTSNs != 0 {
-		result["uts_ns"] = n.UTSNs
-	}
-	if n.IPCNs != 0 {
-		result["ipc_ns"] = n.IPCNs
-	}
-	if n.NetNs != 0 {
-		result["net_ns"] = n.NetNs
-	}
-	if n.CgroupNs != 0 {
-		result["cgroup_ns"] = n.CgroupNs
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		MNTNs    uint32 `json:"mnt_ns,omitempty"`
+		PIDNs    uint32 `json:"pid_ns,omitempty"`
+		UTSNs    uint32 `json:"uts_ns,omitempty"`
+		IPCNs    uint32 `json:"ipc_ns,omitempty"`
+		NetNs    uint32 `json:"net_ns,omitempty"`
+		CgroupNs uint32 `json:"cgroup_ns,omitempty"`
+	}{
+		MNTNs:    n.MNTNs,
+		PIDNs:    n.PIDNs,
+		UTSNs:    n.UTSNs,
+		IPCNs:    n.IPCNs,
+		NetNs:    n.NetNs,
+		CgroupNs: n.CgroupNs,
+	})
 }
 
 // File.
 
 type File struct {
-	// Basic file identity.
+	UUID        string          `json:"uuid"`        // UUID of the file.
 	Path        string          `json:"path"`        // Absolute path to the file.
 	Dir         string          `json:"dir"`         // Directory containing the file.
 	Base        string          `json:"basename"`    // Base name of the file.
@@ -785,34 +946,43 @@ type File struct {
 	Owner       FileOwner       `json:"owner"`       // File owner.
 	Actions     FileActions     `json:"actions"`     // Detailed actions performed on the file.
 	Permissions FilePermissions `json:"permissions"` // File permissions.
-	SpecialBits FileSpecialBits `json:"special"`     // Special permission bits.
 	Metadata    FileMetadata    `json:"metadata"`    // File metadata.
+	// Hashes for external indexing amongst other ongoing events.
+	FileHash uint32 `json:"file_hash"` // The hash of the file.
+	DirHash  uint32 `json:"dir_hash"`  // The hash of the directory.
+	BaseHash uint32 `json:"base_hash"` // The hash of the base name.
 }
 
 func (f File) Clone() File {
 	return File{
+		UUID:        f.UUID,
 		Path:        f.Path,
 		Dir:         f.Dir,
 		Base:        f.Base,
 		Type:        f.Type,
-		Owner:       f.Owner,
+		Owner:       f.Owner.Clone(),
 		Actions:     f.Actions.Clone(),
-		Permissions: f.Permissions,
-		SpecialBits: f.SpecialBits,
-		Metadata:    f.Metadata,
+		Permissions: f.Permissions.Clone(),
+		Metadata:    f.Metadata.Clone(),
+		FileHash:    f.FileHash,
+		DirHash:     f.DirHash,
+		BaseHash:    f.BaseHash,
 	}
 }
 
 func (f File) IsZero() bool {
-	return f.Path == "" &&
+	return f.UUID == "" &&
+		f.Path == "" &&
 		f.Dir == "" &&
 		f.Base == "" &&
 		f.Type == "" &&
 		f.Owner.IsZero() &&
 		f.Actions.IsZero() &&
 		f.Permissions.IsZero() &&
-		f.SpecialBits.IsZero() &&
-		f.Metadata.IsZero()
+		f.Metadata.IsZero() &&
+		f.FileHash == 0 &&
+		f.DirHash == 0 &&
+		f.BaseHash == 0
 }
 
 func (f File) MarshalJSON() ([]byte, error) {
@@ -820,77 +990,74 @@ func (f File) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID        string           `json:"uuid"`
+		Path        string           `json:"path"`
+		Dir         string           `json:"dir"`
+		Base        string           `json:"basename"`
+		Type        string           `json:"type"`
+		Owner       FileOwner        `json:"owner"`
+		Actions     *FileActions     `json:"actions,omitempty"`
+		Permissions *FilePermissions `json:"permissions,omitempty"`
+		Metadata    *FileMetadata    `json:"metadata,omitempty"`
+		FileHash    uint32           `json:"file_hash,omitempty"`
+		DirHash     uint32           `json:"dir_hash,omitempty"`
+		BaseHash    uint32           `json:"base_hash,omitempty"`
+	}{
+		UUID:     f.UUID,
+		Path:     f.Path,
+		Dir:      f.Dir,
+		Base:     f.Base,
+		Type:     f.Type,
+		Owner:    f.Owner,
+		FileHash: f.FileHash,
+		DirHash:  f.DirHash,
+		BaseHash: f.BaseHash,
+	}
 
-	// Always included fields.
-	result["path"] = f.Path
-	result["dir"] = f.Dir
-	result["basename"] = f.Base
-	result["type"] = f.Type
-	result["owner"] = f.Owner
-	result["special"] = f.SpecialBits
-
-	// Omit empty fields.
 	if !f.Actions.IsZero() {
-		result["actions"] = f.Actions
+		created.Actions = &f.Actions
 	}
 	if !f.Permissions.IsZero() {
-		result["permissions"] = f.Permissions
+		created.Permissions = &f.Permissions
 	}
 	if !f.Metadata.IsZero() {
-		result["metadata"] = f.Metadata
+		created.Metadata = &f.Metadata
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
+
+// File Owner.
 
 type FileOwner struct {
 	UID uint32 `json:"uid"` // User ID of owner.
 	GID uint32 `json:"gid"` // Group ID of owner.
 }
 
+func (f FileOwner) Clone() FileOwner {
+	return FileOwner{
+		UID: f.UID,
+		GID: f.GID,
+	}
+}
+
 func (f FileOwner) IsZero() bool {
 	// Note: root user and group have zero values for UID and GID.
-	return f.UID == 0 && f.GID == 0
+	return false
 }
 
 func (f FileOwner) MarshalJSON() ([]byte, error) {
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["uid"] = f.UID
-	result["gid"] = f.GID
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		UID uint32 `json:"uid"`
+		GID uint32 `json:"gid"`
+	}{
+		UID: f.UID,
+		GID: f.GID,
+	})
 }
 
-type FileSpecialBits struct {
-	Setuid bool `json:"setuid"` // Setuid bit set.
-	Setgid bool `json:"setgid"` // Setgid bit set.
-	Sticky bool `json:"sticky"` // Sticky bit set.
-}
-
-func (f FileSpecialBits) IsZero() bool {
-	// Note: this is possible to be true and not zero.
-	return !f.Setuid && !f.Setgid && !f.Sticky
-}
-
-func (f FileSpecialBits) MarshalJSON() ([]byte, error) {
-	result := make(map[string]any)
-
-	// Omit empty fields.
-	if f.Setuid {
-		result["setuid"] = f.Setuid
-	}
-	if f.Setgid {
-		result["setgid"] = f.Setgid
-	}
-	if f.Sticky {
-		result["sticky"] = f.Sticky
-	}
-
-	return json.Marshal(result)
-}
+// File Permissions.
 
 type FilePermissions struct {
 	Mode       string `json:"mode"`        // File mode as string (e.g., "rwxr-xr-x").
@@ -903,6 +1070,27 @@ type FilePermissions struct {
 	OtherRead  bool   `json:"other_read"`  // Others can read.
 	OtherWrite bool   `json:"other_write"` // Others can write.
 	OtherExec  bool   `json:"other_exec"`  // Others can execute.
+	Setuid     bool   `json:"setuid"`      // Setuid bit set.
+	Setgid     bool   `json:"setgid"`      // Setgid bit set.
+	Sticky     bool   `json:"sticky"`      // Sticky bit set.
+}
+
+func (f FilePermissions) Clone() FilePermissions {
+	return FilePermissions{
+		Mode:       f.Mode,
+		OwnerRead:  f.OwnerRead,
+		OwnerWrite: f.OwnerWrite,
+		OwnerExec:  f.OwnerExec,
+		GroupRead:  f.GroupRead,
+		GroupWrite: f.GroupWrite,
+		GroupExec:  f.GroupExec,
+		OtherRead:  f.OtherRead,
+		OtherWrite: f.OtherWrite,
+		OtherExec:  f.OtherExec,
+		Setuid:     f.Setuid,
+		Setgid:     f.Setgid,
+		Sticky:     f.Sticky,
+	}
 }
 
 func (f FilePermissions) IsZero() bool {
@@ -923,35 +1111,60 @@ func (f FilePermissions) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["mode"] = f.Mode
-	result["owner_read"] = f.OwnerRead
-	result["owner_write"] = f.OwnerWrite
-	result["owner_exec"] = f.OwnerExec
-	result["group_read"] = f.GroupRead
-	result["group_write"] = f.GroupWrite
-	result["group_exec"] = f.GroupExec
-	result["other_read"] = f.OtherRead
-	result["other_write"] = f.OtherWrite
-	result["other_exec"] = f.OtherExec
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Mode       string `json:"mode"`
+		OwnerRead  bool   `json:"owner_read"`
+		OwnerWrite bool   `json:"owner_write"`
+		OwnerExec  bool   `json:"owner_exec"`
+		GroupRead  bool   `json:"group_read"`
+		GroupWrite bool   `json:"group_write"`
+		GroupExec  bool   `json:"group_exec"`
+		OtherRead  bool   `json:"other_read"`
+		OtherWrite bool   `json:"other_write"`
+		OtherExec  bool   `json:"other_exec"`
+		Setuid     bool   `json:"setuid"`
+		Setgid     bool   `json:"setgid"`
+		Sticky     bool   `json:"sticky"`
+	}{
+		Mode:       f.Mode,
+		OwnerRead:  f.OwnerRead,
+		OwnerWrite: f.OwnerWrite,
+		OwnerExec:  f.OwnerExec,
+		GroupRead:  f.GroupRead,
+		GroupWrite: f.GroupWrite,
+		GroupExec:  f.GroupExec,
+		OtherRead:  f.OtherRead,
+		OtherWrite: f.OtherWrite,
+		OtherExec:  f.OtherExec,
+		Setuid:     f.Setuid,
+		Setgid:     f.Setgid,
+		Sticky:     f.Sticky,
+	})
 }
 
+// File Metadata.
+
 type FileMetadata struct {
-	Size     int64  `json:"size"`     // File size in bytes.
-	Access   string `json:"access"`   // Last access time.
-	Change   string `json:"change"`   // Last modification time.
-	Creation string `json:"creation"` // Creation time.
+	Size     int64     `json:"size"`     // File size in bytes.
+	Access   time.Time `json:"access"`   // Last access time.
+	Change   time.Time `json:"change"`   // Last modification time.
+	Creation time.Time `json:"creation"` // Creation time.
+}
+
+func (f FileMetadata) Clone() FileMetadata {
+	return FileMetadata{
+		Size:     f.Size,
+		Access:   f.Access,
+		Change:   f.Change,
+		Creation: f.Creation,
+	}
 }
 
 func (f FileMetadata) IsZero() bool {
 	return f.Size == 0 &&
-		f.Access == "" &&
-		f.Change == "" &&
-		f.Creation == ""
+		f.Access.IsZero() &&
+		f.Change.IsZero() &&
+		f.Creation.IsZero()
 }
 
 func (f FileMetadata) MarshalJSON() ([]byte, error) {
@@ -959,24 +1172,20 @@ func (f FileMetadata) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Omit empty fields.
-	if f.Size != 0 {
-		result["size"] = f.Size
-	}
-	if f.Access != "" {
-		result["access"] = f.Access
-	}
-	if f.Change != "" {
-		result["change"] = f.Change
-	}
-	if f.Creation != "" {
-		result["creation"] = f.Creation
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Size     int64     `json:"size,omitempty"`
+		Access   time.Time `json:"access,omitempty"`
+		Change   time.Time `json:"change,omitempty"`
+		Creation time.Time `json:"creation,omitempty"`
+	}{
+		Size:     f.Size,
+		Access:   f.Access,
+		Change:   f.Change,
+		Creation: f.Creation,
+	})
 }
+
+// File Actions.
 
 type FileActions struct {
 	Actions  []string `json:"actions"`  // List of actions performed on the file.
@@ -1041,27 +1250,43 @@ func (f FileActions) MarshalJSON() ([]byte, error) {
 	if f.IsZero() {
 		return []byte("null"), nil
 	}
+	return json.Marshal(struct {
+		Actions  []string `json:"actions,omitempty"`
+		Open     bool     `json:"open,omitempty"`
+		Read     bool     `json:"read,omitempty"`
+		Write    bool     `json:"write,omitempty"`
+		Exec     bool     `json:"exec,omitempty"`
+		Create   bool     `json:"create,omitempty"`
+		Unlink   bool     `json:"unlink,omitempty"`
+		Rename   bool     `json:"rename,omitempty"`
+		Link     bool     `json:"link,omitempty"`
+		Truncate bool     `json:"truncate,omitempty"`
+		Fsync    bool     `json:"fsync,omitempty"`
+		Flock    bool     `json:"flock,omitempty"`
+		Mmap     bool     `json:"mmap,omitempty"`
+		Close    bool     `json:"close,omitempty"`
+		Async    bool     `json:"async,omitempty"`
+		Seek     bool     `json:"seek,omitempty"`
+	}{
+		// Note: we intentionally rely on omitempty here; IsZero() still controls null output.
 
-	result := make(map[string]any)
-
-	result["actions"] = f.Actions
-	result["open"] = f.Open
-	result["read"] = f.Read
-	result["write"] = f.Write
-	result["exec"] = f.Exec
-	result["create"] = f.Create
-	result["unlink"] = f.Unlink
-	result["rename"] = f.Rename
-	result["link"] = f.Link
-	result["truncate"] = f.Truncate
-	result["fsync"] = f.Fsync
-	result["flock"] = f.Flock
-	result["mmap"] = f.Mmap
-	result["close"] = f.Close
-	result["async"] = f.Async
-	result["seek"] = f.Seek
-
-	return json.Marshal(result)
+		Actions:  f.Actions,
+		Open:     f.Open,
+		Read:     f.Read,
+		Write:    f.Write,
+		Exec:     f.Exec,
+		Create:   f.Create,
+		Unlink:   f.Unlink,
+		Rename:   f.Rename,
+		Link:     f.Link,
+		Truncate: f.Truncate,
+		Fsync:    f.Fsync,
+		Flock:    f.Flock,
+		Mmap:     f.Mmap,
+		Close:    f.Close,
+		Async:    f.Async,
+		Seek:     f.Seek,
+	})
 }
 
 // File Aggregate.
@@ -1089,11 +1314,13 @@ func (f FileAggregate) MarshalJSON() ([]byte, error) {
 }
 
 // FSDir.
+
 type FSDir struct {
-	Path  string   `json:"path"`  // Absolute path of the directory.
-	Base  string   `json:"base"`  // Base name of the directory.
-	Dirs  []FSDir  `json:"dirs"`  // Subdirectories.
-	Files []FSFile `json:"files"` // Files in this directory.
+	Path    string   `json:"path"`     // Absolute path of the directory.
+	Base    string   `json:"base"`     // Base name of the directory.
+	Dirs    []FSDir  `json:"dirs"`     // Subdirectories.
+	Files   []FSFile `json:"files"`    // Files in this directory.
+	DirHash uint32   `json:"dir_hash"` // The hash of the directory.
 }
 
 func (f FSDir) Clone() FSDir {
@@ -1106,10 +1333,11 @@ func (f FSDir) Clone() FSDir {
 		files[i] = file.Clone()
 	}
 	return FSDir{
-		Path:  f.Path,
-		Base:  f.Base,
-		Dirs:  dirs,
-		Files: files,
+		Path:    f.Path,
+		Base:    f.Base,
+		Dirs:    dirs,
+		Files:   files,
+		DirHash: f.DirHash,
 	}
 }
 
@@ -1117,7 +1345,8 @@ func (f FSDir) IsZero() bool {
 	return f.Path == "" &&
 		f.Base == "" &&
 		len(f.Dirs) == 0 &&
-		len(f.Files) == 0
+		len(f.Files) == 0 &&
+		f.DirHash == 0
 }
 
 func (f FSDir) MarshalJSON() ([]byte, error) {
@@ -1125,32 +1354,33 @@ func (f FSDir) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Omit empty fields.
-	if f.Path != "" {
-		result["path"] = f.Path
-	}
-	if f.Base != "" {
-		result["base"] = f.Base
-	}
-	if len(f.Dirs) > 0 {
-		result["dirs"] = f.Dirs
-	}
-	if len(f.Files) > 0 {
-		result["files"] = f.Files
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Path    string   `json:"path,omitempty"`
+		Base    string   `json:"base,omitempty"`
+		Dirs    []FSDir  `json:"dirs,omitempty"`
+		Files   []FSFile `json:"files,omitempty"`
+		DirHash uint32   `json:"dir_hash,omitempty"`
+	}{
+		Path:    f.Path,
+		Base:    f.Base,
+		Dirs:    f.Dirs,
+		Files:   f.Files,
+		DirHash: f.DirHash,
+	})
 }
 
+// FSFile.
+
 type FSFile struct {
-	Path     string       `json:"path"`     // Absolute path of the file.
-	Base     string       `json:"base"`     // Base name of the file.
-	Actions  []string     `json:"actions"`  // Actions taken on the file.
-	Mode     string       `json:"mode"`     // File mode.
-	Owner    FileOwner    `json:"owner"`    // File owner.
-	Metadata FileMetadata `json:"metadata"` // File metadata.
+	Path     string       `json:"path"`      // Absolute path of the file.
+	Base     string       `json:"base"`      // Base name of the file.
+	Actions  []string     `json:"actions"`   // Actions taken on the file.
+	Mode     string       `json:"mode"`      // File mode.
+	Owner    FileOwner    `json:"owner"`     // File owner.
+	Metadata FileMetadata `json:"metadata"`  // File metadata.
+	FileHash uint32       `json:"file_hash"` // The hash of the file.
+	DirHash  uint32       `json:"dir_hash"`  // The hash of the directory.
+	BaseHash uint32       `json:"base_hash"` // The hash of the base name.
 }
 
 func (f FSFile) Clone() FSFile {
@@ -1161,6 +1391,9 @@ func (f FSFile) Clone() FSFile {
 		Mode:     f.Mode,
 		Owner:    f.Owner,
 		Metadata: f.Metadata,
+		FileHash: f.FileHash,
+		DirHash:  f.DirHash,
+		BaseHash: f.BaseHash,
 	}
 }
 
@@ -1170,7 +1403,10 @@ func (f FSFile) IsZero() bool {
 		len(f.Actions) == 0 &&
 		f.Mode == "" &&
 		f.Owner.IsZero() &&
-		f.Metadata.IsZero()
+		f.Metadata.IsZero() &&
+		f.FileHash == 0 &&
+		f.DirHash == 0 &&
+		f.BaseHash == 0
 }
 
 func (f FSFile) MarshalJSON() ([]byte, error) {
@@ -1178,26 +1414,38 @@ func (f FSFile) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["path"] = f.Path
-	result["base"] = f.Base
-	result["actions"] = f.Actions
-	result["owner"] = f.Owner
-	result["mode"] = f.Mode
-
-	// Omit empty fields.
-	if !f.Metadata.IsZero() {
-		result["metadata"] = f.Metadata
+	created := struct {
+		Path     string        `json:"path"`
+		Base     string        `json:"base"`
+		Actions  []string      `json:"actions"`
+		Owner    FileOwner     `json:"owner"`
+		Mode     string        `json:"mode"`
+		Metadata *FileMetadata `json:"metadata,omitempty"`
+		FileHash uint32        `json:"file_hash"`
+		DirHash  uint32        `json:"dir_hash"`
+		BaseHash uint32        `json:"base_hash"`
+	}{
+		Path:     f.Path,
+		Base:     f.Base,
+		Actions:  f.Actions,
+		Owner:    f.Owner,
+		Mode:     f.Mode,
+		FileHash: f.FileHash,
+		DirHash:  f.DirHash,
+		BaseHash: f.BaseHash,
 	}
 
-	return json.Marshal(result)
+	if !f.Metadata.IsZero() {
+		created.Metadata = &f.Metadata
+	}
+
+	return json.Marshal(created)
 }
 
 // Flow.
 
 type Flow struct {
+	UUID        string `json:"uuid"`         // UUID of the flow.
 	IPVersion   int    `json:"ip_version"`   // IP version.
 	Proto       string `json:"proto"`        // Protocol.
 	ICMP        ICMP   `json:"icmp"`         // ICMP.
@@ -1206,10 +1454,13 @@ type Flow struct {
 	ServicePort int    `json:"service_port"` // Service port.
 	Flags       Flags  `json:"flags"`        // Flags.
 	Phase       Phase  `json:"phase"`        // Flow phase.
+	// Hashes for external indexing amongst other ongoing events.
+	FlowHash uint32 `json:"flow_hash"` // The hash of the flow.
 }
 
 func (f Flow) Clone() Flow {
 	return Flow{
+		UUID:        f.UUID,
 		IPVersion:   f.IPVersion,
 		Proto:       f.Proto,
 		ICMP:        f.ICMP,
@@ -1218,18 +1469,21 @@ func (f Flow) Clone() Flow {
 		ServicePort: f.ServicePort,
 		Flags:       f.Flags,
 		Phase:       f.Phase,
+		FlowHash:    f.FlowHash,
 	}
 }
 
 func (f Flow) IsZero() bool {
-	return f.IPVersion == 0 &&
+	return f.UUID == "" &&
+		f.IPVersion == 0 &&
 		f.Proto == "" &&
 		f.ICMP.IsZero() &&
 		f.Local.IsZero() &&
 		f.Remote.IsZero() &&
 		f.ServicePort == 0 &&
 		f.Flags.IsZero() &&
-		f.Phase.IsZero()
+		f.Phase.IsZero() &&
+		f.FlowHash == 0
 }
 
 func (f Flow) MarshalJSON() ([]byte, error) {
@@ -1237,33 +1491,44 @@ func (f Flow) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID        string `json:"uuid"`
+		IPVersion   int    `json:"ip_version"`
+		Proto       string `json:"proto"`
+		ICMP        *ICMP  `json:"icmp,omitempty"`
+		Local       *Node  `json:"local,omitempty"`
+		Remote      *Node  `json:"remote,omitempty"`
+		ServicePort int    `json:"service_port,omitempty"`
+		Flags       *Flags `json:"flags,omitempty"`
+		Phase       *Phase `json:"phase,omitempty"`
+		FlowHash    uint32 `json:"flow_hash,omitempty"`
+	}{
+		UUID:      f.UUID,
+		IPVersion: f.IPVersion,
+		Proto:     f.Proto,
+		FlowHash:  f.FlowHash,
+	}
 
-	// Always included fields.
-	result["ip_version"] = f.IPVersion
-	result["proto"] = f.Proto
-
-	// Omit empty fields.
 	if !f.ICMP.IsZero() {
-		result["icmp"] = f.ICMP
+		created.ICMP = &f.ICMP
 	}
 	if !f.Local.IsZero() {
-		result["local"] = f.Local
+		created.Local = &f.Local
 	}
 	if !f.Remote.IsZero() {
-		result["remote"] = f.Remote
+		created.Remote = &f.Remote
 	}
 	if f.ServicePort != 0 {
-		result["service_port"] = f.ServicePort
+		created.ServicePort = f.ServicePort
 	}
 	if !f.Flags.IsZero() {
-		result["flags"] = f.Flags
+		created.Flags = &f.Flags
 	}
 	if !f.Phase.IsZero() {
-		result["phase"] = f.Phase
+		created.Phase = &f.Phase
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 type ICMP struct {
@@ -1280,13 +1545,13 @@ func (i ICMP) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["type"] = i.Type
-	result["code"] = i.Code
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Type string `json:"type"`
+		Code string `json:"code"`
+	}{
+		Type: i.Type,
+		Code: i.Code,
+	})
 }
 
 type Node struct {
@@ -1317,19 +1582,17 @@ func (n Node) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["address"] = n.Address
-	result["name"] = n.Name
-	result["port"] = n.Port
-
-	// Omit empty fields.
-	if len(n.Names) > 0 {
-		result["names"] = n.Names
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Address string   `json:"address"`
+		Name    string   `json:"name"`
+		Names   []string `json:"names,omitempty"`
+		Port    int      `json:"port"`
+	}{
+		Address: n.Address,
+		Name:    n.Name,
+		Names:   n.Names,
+		Port:    n.Port,
+	})
 }
 
 type Flags struct {
@@ -1361,20 +1624,27 @@ func (f Flags) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["ingress"] = f.Ingress
-	result["egress"] = f.Egress
-	result["incoming"] = f.Incoming
-	result["outgoing"] = f.Outgoing
-	result["started"] = f.Started
-	result["ongoing"] = f.Ongoing
-	result["ended"] = f.Ended
-	result["terminator"] = f.Terminator
-	result["terminated"] = f.Terminated
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Ingress    bool `json:"ingress"`
+		Egress     bool `json:"egress"`
+		Incoming   bool `json:"incoming"`
+		Outgoing   bool `json:"outgoing"`
+		Started    bool `json:"started"`
+		Ongoing    bool `json:"ongoing"`
+		Ended      bool `json:"ended"`
+		Terminator bool `json:"terminator"`
+		Terminated bool `json:"terminated"`
+	}{
+		Ingress:    f.Ingress,
+		Egress:     f.Egress,
+		Incoming:   f.Incoming,
+		Outgoing:   f.Outgoing,
+		Started:    f.Started,
+		Ongoing:    f.Ongoing,
+		Ended:      f.Ended,
+		Terminator: f.Terminator,
+		Terminated: f.Terminated,
+	})
 }
 
 type Phase struct {
@@ -1396,23 +1666,27 @@ func (p Phase) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["direction"] = p.Direction
-	result["initiated_by"] = p.InitatedBy
-	result["status"] = p.Status
-	result["ended_by"] = p.EndedBy
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Direction  string `json:"direction"`
+		InitatedBy string `json:"initiated_by"`
+		Status     string `json:"status"`
+		EndedBy    string `json:"ended_by"`
+	}{
+		Direction:  p.Direction,
+		InitatedBy: p.InitatedBy,
+		Status:     p.Status,
+		EndedBy:    p.EndedBy,
+	})
 }
 
-// Flow Aggregate.
+// Node Pair Key.
 
 type NodePairKey struct {
 	LocalAddr  string `json:"local_addr"`
 	RemoteAddr string `json:"remote_addr"`
 }
+
+// Flow Aggregate.
 
 type FlowAggregate struct {
 	IPVersion int                 `json:"ip_version"` // IP version.
@@ -1439,17 +1713,16 @@ func (f FlowAggregate) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	if f.IPVersion != 0 {
-		result["ip_version"] = f.IPVersion
-	}
-	if len(f.Protocols) > 0 {
-		result["protocols"] = f.Protocols
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		IPVersion int                 `json:"ip_version,omitempty"`
+		Protocols []ProtocolAggregate `json:"protocols,omitempty"`
+	}{
+		IPVersion: f.IPVersion,
+		Protocols: f.Protocols,
+	})
 }
+
+// Protocol Aggregate.
 
 type ProtocolAggregate struct {
 	Proto string                   `json:"proto"` // Protocol (e.g., TCP, UDP, ICMP).
@@ -1482,20 +1755,18 @@ func (p ProtocolAggregate) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	if p.Proto != "" {
-		result["proto"] = p.Proto
-	}
-	if len(p.Pairs) > 0 {
-		result["pairs"] = p.Pairs
-	}
-	if len(p.ICMPs) > 0 {
-		result["icmps"] = p.ICMPs
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Proto string                   `json:"proto,omitempty"`
+		Pairs []ProtocolLocalRemoteAgg `json:"pairs,omitempty"`
+		ICMPs []ICMP                   `json:"icmps,omitempty"`
+	}{
+		Proto: p.Proto,
+		Pairs: p.Pairs,
+		ICMPs: p.ICMPs,
+	})
 }
+
+// Protocol Local/Remote Aggregate.
 
 type ProtocolLocalRemoteAgg struct {
 	Nodes      LocalRemotePair `json:"nodes"`       // Local and remote nodes.
@@ -1520,17 +1791,21 @@ func (p ProtocolLocalRemoteAgg) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		Nodes      *LocalRemotePair `json:"nodes,omitempty"`
+		PortMatrix []PortCommAgg    `json:"port_matrix,omitempty"`
+	}{
+		PortMatrix: p.PortMatrix,
+	}
 
 	if !p.Nodes.IsZero() {
-		result["nodes"] = p.Nodes
-	}
-	if len(p.PortMatrix) > 0 {
-		result["port_matrix"] = p.PortMatrix
+		created.Nodes = &p.Nodes
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
+
+// Protocol Node.
 
 type ProtocolNode struct {
 	Address string   `json:"address"` // IP address.
@@ -1557,21 +1832,18 @@ func (p ProtocolNode) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["address"] = p.Address
-
-	// Omit empty fields.
-	if p.Name != "" {
-		result["name"] = p.Name
-	}
-	if len(p.Names) > 0 {
-		result["names"] = p.Names
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Address string   `json:"address"`
+		Name    string   `json:"name,omitempty"`
+		Names   []string `json:"names,omitempty"`
+	}{
+		Address: p.Address,
+		Name:    p.Name,
+		Names:   p.Names,
+	})
 }
+
+// Local/Remote Pair.
 
 type LocalRemotePair struct {
 	Local  ProtocolNode `json:"local"`  // Local node.
@@ -1594,14 +1866,16 @@ func (l LocalRemotePair) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["local"] = l.Local
-	result["remote"] = l.Remote
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Local  ProtocolNode `json:"local"`
+		Remote ProtocolNode `json:"remote"`
+	}{
+		Local:  l.Local,
+		Remote: l.Remote,
+	})
 }
+
+// Port Communication Aggregate.
 
 type PortCommAgg struct {
 	SrcPort int   `json:"src_port"` // Source port.
@@ -1620,50 +1894,52 @@ func (p PortCommAgg) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["src_port"] = p.SrcPort
-	result["dst_port"] = p.DstPort
-
-	// Omit empty fields.
-	if !p.Phase.IsZero() {
-		result["phase"] = p.Phase
+	created := struct {
+		SrcPort int    `json:"src_port"`
+		DstPort int    `json:"dst_port"`
+		Phase   *Phase `json:"phase,omitempty"`
+	}{
+		SrcPort: p.SrcPort,
+		DstPort: p.DstPort,
 	}
 
-	return json.Marshal(result)
+	if !p.Phase.IsZero() {
+		created.Phase = &p.Phase
+	}
+
+	return json.Marshal(created)
 }
 
 // Containers and Namespaces.
 
-type ContainerAggregate struct {
-	MntNamespaceIDs    []ContainerPair `json:"mnt_namespace_ids"`
-	PidNamespaceIDs    []ContainerPair `json:"pid_namespace_ids"`
-	UtsNamespaceIDs    []ContainerPair `json:"uts_namespace_ids"`
-	IpcNamespaceIDs    []ContainerPair `json:"ipc_namespace_ids"`
-	NetNamespaceIDs    []ContainerPair `json:"net_namespace_ids"`
-	CgroupNamespaceIDs []ContainerPair `json:"cgroup_namespace_ids"`
-	Containers         []Container     `json:"containers"`
+type Containers struct {
+	MntNamespaceIDs    []ContainerID `json:"mnt_namespace_ids"`    // Mount namespace IDs.
+	PidNamespaceIDs    []ContainerID `json:"pid_namespace_ids"`    // PID namespace IDs.
+	UtsNamespaceIDs    []ContainerID `json:"uts_namespace_ids"`    // UTS namespace IDs.
+	IpcNamespaceIDs    []ContainerID `json:"ipc_namespace_ids"`    // IPC namespace IDs.
+	NetNamespaceIDs    []ContainerID `json:"net_namespace_ids"`    // Net namespace IDs.
+	CgroupNamespaceIDs []ContainerID `json:"cgroup_namespace_ids"` // Cgroup namespace IDs.
+	Containers         []Container   `json:"containers"`           // Containers.
 }
 
-func (c ContainerAggregate) Clone() ContainerAggregate {
-	mnt := make([]ContainerPair, len(c.MntNamespaceIDs))
+func (c Containers) Clone() Containers {
+	mnt := make([]ContainerID, len(c.MntNamespaceIDs))
 	copy(mnt, c.MntNamespaceIDs)
-	pid := make([]ContainerPair, len(c.PidNamespaceIDs))
+	pid := make([]ContainerID, len(c.PidNamespaceIDs))
 	copy(pid, c.PidNamespaceIDs)
-	uts := make([]ContainerPair, len(c.UtsNamespaceIDs))
+	uts := make([]ContainerID, len(c.UtsNamespaceIDs))
 	copy(uts, c.UtsNamespaceIDs)
-	ipc := make([]ContainerPair, len(c.IpcNamespaceIDs))
+	ipc := make([]ContainerID, len(c.IpcNamespaceIDs))
 	copy(ipc, c.IpcNamespaceIDs)
-	net := make([]ContainerPair, len(c.NetNamespaceIDs))
+	net := make([]ContainerID, len(c.NetNamespaceIDs))
 	copy(net, c.NetNamespaceIDs)
-	cgroup := make([]ContainerPair, len(c.CgroupNamespaceIDs))
+	cgroup := make([]ContainerID, len(c.CgroupNamespaceIDs))
 	copy(cgroup, c.CgroupNamespaceIDs)
 	containers := make([]Container, len(c.Containers))
 	for i, container := range c.Containers {
 		containers[i] = container.Clone()
 	}
-	return ContainerAggregate{
+	return Containers{
 		MntNamespaceIDs:    mnt,
 		PidNamespaceIDs:    pid,
 		UtsNamespaceIDs:    uts,
@@ -1674,7 +1950,7 @@ func (c ContainerAggregate) Clone() ContainerAggregate {
 	}
 }
 
-func (c ContainerAggregate) IsZero() bool {
+func (c Containers) IsZero() bool {
 	return len(c.MntNamespaceIDs) == 0 &&
 		len(c.PidNamespaceIDs) == 0 &&
 		len(c.UtsNamespaceIDs) == 0 &&
@@ -1684,73 +1960,64 @@ func (c ContainerAggregate) IsZero() bool {
 		len(c.Containers) == 0
 }
 
-func (c ContainerAggregate) MarshalJSON() ([]byte, error) {
+func (c Containers) MarshalJSON() ([]byte, error) {
 	if c.IsZero() {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Omit empty fields.
-	if len(c.MntNamespaceIDs) > 0 {
-		result["mnt_namespace_ids"] = c.MntNamespaceIDs
-	}
-	if len(c.PidNamespaceIDs) > 0 {
-		result["pid_namespace_ids"] = c.PidNamespaceIDs
-	}
-	if len(c.UtsNamespaceIDs) > 0 {
-		result["uts_namespace_ids"] = c.UtsNamespaceIDs
-	}
-	if len(c.IpcNamespaceIDs) > 0 {
-		result["ipc_namespace_ids"] = c.IpcNamespaceIDs
-	}
-	if len(c.NetNamespaceIDs) > 0 {
-		result["net_namespace_ids"] = c.NetNamespaceIDs
-	}
-	if len(c.CgroupNamespaceIDs) > 0 {
-		result["cgroup_namespace_ids"] = c.CgroupNamespaceIDs
-	}
-	if len(c.Containers) > 0 {
-		result["containers"] = c.Containers
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		MntNamespaceIDs    []ContainerID `json:"mnt_namespace_ids,omitempty"`
+		PidNamespaceIDs    []ContainerID `json:"pid_namespace_ids,omitempty"`
+		UtsNamespaceIDs    []ContainerID `json:"uts_namespace_ids,omitempty"`
+		IpcNamespaceIDs    []ContainerID `json:"ipc_namespace_ids,omitempty"`
+		NetNamespaceIDs    []ContainerID `json:"net_namespace_ids,omitempty"`
+		CgroupNamespaceIDs []ContainerID `json:"cgroup_namespace_ids,omitempty"`
+		Containers         []Container   `json:"containers,omitempty"`
+	}{
+		MntNamespaceIDs:    c.MntNamespaceIDs,
+		PidNamespaceIDs:    c.PidNamespaceIDs,
+		UtsNamespaceIDs:    c.UtsNamespaceIDs,
+		IpcNamespaceIDs:    c.IpcNamespaceIDs,
+		NetNamespaceIDs:    c.NetNamespaceIDs,
+		CgroupNamespaceIDs: c.CgroupNamespaceIDs,
+		Containers:         c.Containers,
+	})
 }
 
-type ContainerPair struct {
-	Name string `json:"name"`
-	ID   string `json:"id"`
+// Container ID.
+
+type ContainerID struct {
+	Name string `json:"name"` // Container name.
+	ID   string `json:"id"`   // Container ID.
 }
 
-func (c ContainerPair) GetName() string {
+func (c ContainerID) GetName() string {
 	return c.Name
 }
 
-func (c ContainerPair) GetID() string {
+func (c ContainerID) GetID() string {
 	return c.ID
 }
 
-func (c ContainerPair) IsZero() bool {
+func (c ContainerID) IsZero() bool {
 	return c.Name == "" && c.ID == ""
 }
 
-func (c ContainerPair) MarshalJSON() ([]byte, error) {
+func (c ContainerID) MarshalJSON() ([]byte, error) {
 	if c.IsZero() {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["id"] = c.ID
-
-	// Omit empty fields.
-	if c.Name != "" {
-		result["name"] = c.Name
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		ID   string `json:"id"`
+		Name string `json:"name,omitempty"`
+	}{
+		ID:   c.ID,
+		Name: c.Name,
+	})
 }
+
+// Mount.
 
 type Mount struct {
 	Source      string `json:"source"`
@@ -1777,15 +2044,18 @@ func (m Mount) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["source"] = m.Source
-	result["destination"] = m.Destination
-	result["type"] = m.Type
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Source      string `json:"source"`
+		Destination string `json:"destination"`
+		Type        string `json:"type"`
+	}{
+		Source:      m.Source,
+		Destination: m.Destination,
+		Type:        m.Type,
+	})
 }
+
+// Container.
 
 type Container struct {
 	ID           string     `json:"id"`            // Container ID.
@@ -1802,9 +2072,9 @@ type Container struct {
 	IsAttached   bool       `json:"is_attached"`   // Whether the container is attached to the host.
 	Path         string     `json:"path"`          // Path to the container executable.
 	Cwd          string     `json:"cwd"`           // Current working directory.
-	CreatedAt    string     `json:"created_at"`    // Creation time, RFC3339 string.
-	StartedAt    string     `json:"started_at"`    // Start time, RFC3339 string.
-	FinishedAt   string     `json:"finished_at"`   // Finish time, RFC3339 string.
+	CreatedAt    time.Time  `json:"created_at"`    // Creation time.
+	StartedAt    time.Time  `json:"started_at"`    // Start time.
+	FinishedAt   time.Time  `json:"finished_at"`   // Finish time.
 	Mounts       []Mount    `json:"mounts"`        // Mounts.
 	NetworkMode  string     `json:"network_mode"`  // Network mode.
 	CgroupnsMode string     `json:"cgroupns_mode"` // Cgroup namespace mode.
@@ -1868,9 +2138,9 @@ func (c Container) IsZero() bool {
 		!c.IsAttached &&
 		c.Path == "" &&
 		c.Cwd == "" &&
-		c.CreatedAt == "" &&
-		c.StartedAt == "" &&
-		c.FinishedAt == "" &&
+		c.CreatedAt.IsZero() &&
+		c.StartedAt.IsZero() &&
+		c.FinishedAt.IsZero() &&
 		len(c.Mounts) == 0 &&
 		c.NetworkMode == "" &&
 		c.CgroupnsMode == "" &&
@@ -1888,90 +2158,74 @@ func (c Container) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		ID           string      `json:"id"`
+		Name         string      `json:"name,omitempty"`
+		HostName     string      `json:"hostname,omitempty"`
+		ImageID      string      `json:"image_id,omitempty"`
+		Image        string      `json:"image,omitempty"`
+		Version      string      `json:"version,omitempty"`
+		Runtime      string      `json:"runtime,omitempty"`
+		Driver       string      `json:"driver,omitempty"`
+		PID          int         `json:"pid,omitempty"`
+		ExitCode     int         `json:"exit_code,omitempty"`
+		Status       string      `json:"status,omitempty"`
+		IsAttached   bool        `json:"is_attached,omitempty"`
+		Path         string      `json:"path,omitempty"`
+		Cwd          string      `json:"cwd,omitempty"`
+		CreatedAt    *time.Time  `json:"created_at,omitempty"`
+		StartedAt    *time.Time  `json:"started_at,omitempty"`
+		FinishedAt   *time.Time  `json:"finished_at,omitempty"`
+		Mounts       []Mount     `json:"mounts,omitempty"`
+		NetworkMode  string      `json:"network_mode,omitempty"`
+		CgroupnsMode string      `json:"cgroupns_mode,omitempty"`
+		IpcMode      string      `json:"ipc_mode,omitempty"`
+		PidMode      string      `json:"pid_mode,omitempty"`
+		UsernsMode   string      `json:"userns_mode,omitempty"`
+		UTSMode      string      `json:"uts_mode,omitempty"`
+		Env          []string    `json:"env,omitempty"`
+		Cmd          []string    `json:"cmd,omitempty"`
+		Namespaces   *Namespaces `json:"namespaces,omitempty"`
+	}{
+		ID:           c.ID,
+		Name:         c.Name,
+		HostName:     c.HostName,
+		ImageID:      c.ImageID,
+		Image:        c.Image,
+		Version:      c.Version,
+		Runtime:      c.Runtime,
+		Driver:       c.Driver,
+		PID:          c.PID,
+		ExitCode:     c.ExitCode,
+		Status:       c.Status,
+		IsAttached:   c.IsAttached,
+		Path:         c.Path,
+		Cwd:          c.Cwd,
+		Mounts:       c.Mounts,
+		NetworkMode:  c.NetworkMode,
+		CgroupnsMode: c.CgroupnsMode,
+		IpcMode:      c.IpcMode,
+		PidMode:      c.PidMode,
+		UsernsMode:   c.UsernsMode,
+		UTSMode:      c.UTSMode,
+		Env:          c.Env,
+		Cmd:          c.Cmd,
+	}
 
-	result["id"] = c.ID
-
-	if c.Name != "" {
-		result["name"] = c.Name
+	if !c.CreatedAt.IsZero() {
+		created.CreatedAt = &c.CreatedAt
 	}
-	if c.HostName != "" {
-		result["hostname"] = c.HostName
+	if !c.StartedAt.IsZero() {
+		created.StartedAt = &c.StartedAt
 	}
-	if c.ImageID != "" {
-		result["image_id"] = c.ImageID
-	}
-	if c.Image != "" {
-		result["image"] = c.Image
-	}
-	if c.Version != "" {
-		result["version"] = c.Version
-	}
-	if c.Runtime != "" {
-		result["runtime"] = c.Runtime
-	}
-	if c.Driver != "" {
-		result["driver"] = c.Driver
-	}
-	if c.PID != 0 {
-		result["pid"] = c.PID
-	}
-	if c.ExitCode != 0 {
-		result["exit_code"] = c.ExitCode
-	}
-	if c.Status != "" {
-		result["status"] = c.Status
-	}
-	if c.IsAttached {
-		result["is_attached"] = c.IsAttached
-	}
-	if c.Path != "" {
-		result["path"] = c.Path
-	}
-	if c.Cwd != "" {
-		result["cwd"] = c.Cwd
-	}
-	if c.CreatedAt != "" {
-		result["created_at"] = c.CreatedAt
-	}
-	if c.StartedAt != "" {
-		result["started_at"] = c.StartedAt
-	}
-	if c.FinishedAt != "" {
-		result["finished_at"] = c.FinishedAt
-	}
-	if len(c.Mounts) > 0 {
-		result["mounts"] = c.Mounts
-	}
-	if c.NetworkMode != "" {
-		result["network_mode"] = c.NetworkMode
-	}
-	if c.CgroupnsMode != "" {
-		result["cgroupns_mode"] = c.CgroupnsMode
-	}
-	if c.IpcMode != "" {
-		result["ipc_mode"] = c.IpcMode
-	}
-	if c.PidMode != "" {
-		result["pid_mode"] = c.PidMode
-	}
-	if c.UsernsMode != "" {
-		result["userns_mode"] = c.UsernsMode
-	}
-	if c.UTSMode != "" {
-		result["uts_mode"] = c.UTSMode
-	}
-	if len(c.Env) > 0 {
-		result["env"] = c.Env
-	}
-	if len(c.Cmd) > 0 {
-		result["cmd"] = c.Cmd
+	if !c.FinishedAt.IsZero() {
+		created.FinishedAt = &c.FinishedAt
 	}
 	if !c.Namespaces.IsZero() {
-		result["namespaces"] = c.Namespaces
+		created.Namespaces = &c.Namespaces
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 //
@@ -2002,16 +2256,13 @@ func (pt ProcessTree) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	if pt.Process != "" {
-		result["process"] = pt.Process
-	}
-	if len(pt.Ancestry) > 0 {
-		result["ancestry"] = pt.Ancestry
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Process  string   `json:"process,omitempty"`
+		Ancestry []string `json:"ancestry,omitempty"`
+	}{
+		Process:  pt.Process,
+		Ancestry: pt.Ancestry,
+	})
 }
 
 func (pt ProcessTree) String() string {
@@ -2090,46 +2341,33 @@ func (gl GeoIPLocation) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	if gl.Latitude != 0 {
-		result["latitude"] = gl.Latitude
-	}
-	if gl.Longitude != 0 {
-		result["longitude"] = gl.Longitude
-	}
-	if gl.Continent != "" {
-		result["continent"] = gl.Continent
-	}
-	if gl.ContinentCode != "" {
-		result["continent_code"] = gl.ContinentCode
-	}
-	if gl.Country != "" {
-		result["country"] = gl.Country
-	}
-	if gl.CountryCode != "" {
-		result["country_code"] = gl.CountryCode
-	}
-	if gl.Region != "" {
-		result["region"] = gl.Region
-	}
-	if gl.RegionName != "" {
-		result["region_name"] = gl.RegionName
-	}
-	if gl.City != "" {
-		result["city"] = gl.City
-	}
-	if gl.ISP != "" {
-		result["isp"] = gl.ISP
-	}
-	if gl.Org != "" {
-		result["org"] = gl.Org
-	}
-	if gl.Asname != "" {
-		result["asname"] = gl.Asname
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Latitude      float64 `json:"latitude,omitempty"`
+		Longitude     float64 `json:"longitude,omitempty"`
+		Continent     string  `json:"continent,omitempty"`
+		ContinentCode string  `json:"continent_code,omitempty"`
+		Country       string  `json:"country,omitempty"`
+		CountryCode   string  `json:"country_code,omitempty"`
+		Region        string  `json:"region,omitempty"`
+		RegionName    string  `json:"region_name,omitempty"`
+		City          string  `json:"city,omitempty"`
+		ISP           string  `json:"isp,omitempty"`
+		Org           string  `json:"org,omitempty"`
+		Asname        string  `json:"asname,omitempty"`
+	}{
+		Latitude:      gl.Latitude,
+		Longitude:     gl.Longitude,
+		Continent:     gl.Continent,
+		ContinentCode: gl.ContinentCode,
+		Country:       gl.Country,
+		CountryCode:   gl.CountryCode,
+		Region:        gl.Region,
+		RegionName:    gl.RegionName,
+		City:          gl.City,
+		ISP:           gl.ISP,
+		Org:           gl.Org,
+		Asname:        gl.Asname,
+	})
 }
 
 func (gl GeoIPLocation) String() string {
@@ -2156,13 +2394,13 @@ func (gl GeoIPLocation) String() string {
 
 type Peer struct {
 	Result        Result        `json:"result"`
+	Detections    []string      `json:"detections"`
 	Protocol      string        `json:"protocol"`
 	LocalAddress  string        `json:"local_address"`
 	RemoteAddress string        `json:"remote_address"`
 	LocalNames    []string      `json:"local_names"`
 	RemoteNames   []string      `json:"remote_names"`
 	RemotePorts   []string      `json:"remote_ports"`
-	Detections    []string      `json:"detections"`
 	ProcTrees     []ProcessTree `json:"proc_trees"`
 	RemoteGeoInfo GeoIPLocation `json:"remote_geo_info"`
 }
@@ -2174,13 +2412,13 @@ func (ep Peer) Clone() Peer {
 	}
 	return Peer{
 		Result:        ep.Result,
+		Detections:    append([]string(nil), ep.Detections...),
 		Protocol:      ep.Protocol,
 		LocalAddress:  ep.LocalAddress,
 		LocalNames:    append([]string(nil), ep.LocalNames...),
 		RemoteAddress: ep.RemoteAddress,
 		RemoteNames:   append([]string(nil), ep.RemoteNames...),
 		RemotePorts:   append([]string(nil), ep.RemotePorts...),
-		Detections:    append([]string(nil), ep.Detections...),
 		ProcTrees:     processTrees,
 		RemoteGeoInfo: ep.RemoteGeoInfo,
 	}
@@ -2188,13 +2426,13 @@ func (ep Peer) Clone() Peer {
 
 func (ep Peer) IsZero() bool {
 	return ep.Result.IsZero() &&
+		len(ep.Detections) == 0 &&
 		ep.Protocol == "" &&
 		ep.LocalAddress == "" &&
 		ep.RemoteAddress == "" &&
 		len(ep.LocalNames) == 0 &&
 		len(ep.RemoteNames) == 0 &&
 		len(ep.RemotePorts) == 0 &&
-		len(ep.Detections) == 0 &&
 		len(ep.ProcTrees) == 0 &&
 		ep.RemoteGeoInfo.IsZero()
 }
@@ -2204,35 +2442,34 @@ func (ep Peer) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		Result        string         `json:"result"`
+		Detections    []string       `json:"detections"`
+		Protocol      string         `json:"protocol"`
+		LocalAddress  string         `json:"local_address"`
+		RemoteAddress string         `json:"remote_address"`
+		LocalNames    []string       `json:"local_names,omitempty"`
+		RemoteNames   []string       `json:"remote_names,omitempty"`
+		RemotePorts   []string       `json:"remote_ports,omitempty"`
+		ProcTrees     []ProcessTree  `json:"proc_trees,omitempty"`
+		RemoteGeoInfo *GeoIPLocation `json:"remote_geo_info,omitempty"`
+	}{
+		Result:        ep.Result.String(),
+		Detections:    ep.Detections,
+		Protocol:      ep.Protocol,
+		LocalAddress:  ep.LocalAddress,
+		RemoteAddress: ep.RemoteAddress,
+		LocalNames:    ep.LocalNames,
+		RemoteNames:   ep.RemoteNames,
+		RemotePorts:   ep.RemotePorts,
+		ProcTrees:     ep.ProcTrees,
+	}
 
-	// Always included fields.
-	result["result"] = ep.Result.String()
-	result["protocol"] = ep.Protocol
-	result["local_address"] = ep.LocalAddress
-	result["remote_address"] = ep.RemoteAddress
-
-	// Omit empty fields.
-	if len(ep.LocalNames) > 0 {
-		result["local_names"] = ep.LocalNames
-	}
-	if len(ep.RemoteNames) > 0 {
-		result["remote_names"] = ep.RemoteNames
-	}
-	if len(ep.RemotePorts) > 0 {
-		result["remote_ports"] = ep.RemotePorts
-	}
-	if len(ep.Detections) > 0 {
-		result["detections"] = ep.Detections
-	}
-	if len(ep.ProcTrees) > 0 {
-		result["proc_trees"] = ep.ProcTrees
-	}
 	if !ep.RemoteGeoInfo.IsZero() {
-		result["remote_geo_info"] = ep.RemoteGeoInfo
+		created.RemoteGeoInfo = &ep.RemoteGeoInfo
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 func (ep Peer) String() string {
@@ -2271,17 +2508,13 @@ func (e Direction) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Omit empty fields.
-	if len(e.Peers) > 0 {
-		result["peers"] = e.Peers
-	}
-	if len(e.Domains) > 0 {
-		result["domains"] = e.Domains
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Peers   []Peer   `json:"peers,omitempty"`
+		Domains []string `json:"domains,omitempty"`
+	}{
+		Peers:   e.Peers,
+		Domains: e.Domains,
+	})
 }
 
 // NetProfile: A collection of network telemetry that supports the profile.
@@ -2311,20 +2544,23 @@ func (np NetProfile) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		Egress  *Direction `json:"egress,omitempty"`
+		Ingress *Direction `json:"ingress,omitempty"`
+		Local   *Direction `json:"local,omitempty"`
+	}{}
 
-	// Always included field.
 	if !np.Egress.IsZero() {
-		result["egress"] = np.Egress
+		created.Egress = &np.Egress
 	}
 	if !np.Ingress.IsZero() {
-		result["ingress"] = np.Ingress
+		created.Ingress = &np.Ingress
 	}
 	if !np.Local.IsZero() {
-		result["local"] = np.Local
+		created.Local = &np.Local
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // DirectionNetTelemetry: Summary of network telemetry for a direction.
@@ -2342,7 +2578,8 @@ func (int DirectionNetTelemetry) Clone() DirectionNetTelemetry {
 }
 
 func (int DirectionNetTelemetry) IsZero() bool {
-	return int.TotalDomains == 0 && int.TotalConnections == 0
+	// Both values must be zero to be considered zero.
+	return false
 }
 
 func (int DirectionNetTelemetry) MarshalJSON() ([]byte, error) {
@@ -2350,13 +2587,13 @@ func (int DirectionNetTelemetry) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["total_domains"] = int.TotalDomains
-	result["total_connections"] = int.TotalConnections
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		TotalDomains     uint `json:"total_domains"`
+		TotalConnections uint `json:"total_connections"`
+	}{
+		TotalDomains:     int.TotalDomains,
+		TotalConnections: int.TotalConnections,
+	})
 }
 
 // NetTelemetry: Summary of network telemetry for the profile.
@@ -2384,20 +2621,23 @@ func (nt NetTelemetry) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		Egress  *DirectionNetTelemetry `json:"egress,omitempty"`
+		Ingress *DirectionNetTelemetry `json:"ingress,omitempty"`
+		Local   *DirectionNetTelemetry `json:"local,omitempty"`
+	}{}
 
-	// Always included fields.
 	if !nt.Egress.IsZero() {
-		result["egress"] = nt.Egress
+		created.Egress = &nt.Egress
 	}
 	if !nt.Ingress.IsZero() {
-		result["ingress"] = nt.Ingress
+		created.Ingress = &nt.Ingress
 	}
 	if !nt.Local.IsZero() {
-		result["local"] = nt.Local
+		created.Local = &nt.Local
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }
 
 // Telemetry: A collection of telemetry data that supports the profile.
@@ -2421,20 +2661,19 @@ func (t Telemetry) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included field.
-	result["network"] = t.Network
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Network NetTelemetry `json:"network"`
+	}{
+		Network: t.Network,
+	})
 }
 
 // Evidence: A single piece of evidence that supports an assertion.
 
 type Evidence struct {
-	Timestamp string `json:"timestamp"`  // Event timestamp.
-	EventName string `json:"event_name"` // Event name.
-	Peer      Peer   `json:"peer"`       // Peer.
+	Timestamp time.Time `json:"timestamp"`  // Event timestamp.
+	EventName string    `json:"event_name"` // Event name.
+	Peer      Peer      `json:"peer"`       // Peer.
 }
 
 func (e Evidence) Clone() Evidence {
@@ -2446,7 +2685,7 @@ func (e Evidence) Clone() Evidence {
 }
 
 func (e Evidence) IsZero() bool {
-	return e.Timestamp == "" &&
+	return e.Timestamp.IsZero() &&
 		e.EventName == "" &&
 		e.Peer.IsZero()
 }
@@ -2456,18 +2695,20 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	result["timestamp"] = e.Timestamp
-	result["event_name"] = e.EventName
-
-	// Omit empty fields.
-	if !e.Peer.IsZero() {
-		result["peer"] = e.Peer
+	created := struct {
+		Timestamp time.Time `json:"timestamp"`
+		EventName string    `json:"event_name"`
+		Peer      *Peer     `json:"peer,omitempty"`
+	}{
+		Timestamp: e.Timestamp,
+		EventName: e.EventName,
 	}
 
-	return json.Marshal(result)
+	if !e.Peer.IsZero() {
+		created.Peer = &e.Peer
+	}
+
+	return json.Marshal(created)
 }
 
 // ResultID: A unique identifier for a result.
@@ -2748,24 +2989,25 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	// Always included fields.
-	if a.Result.IsZero() {
-		result["result"] = ResultGood.String()
-	} else {
-		result["result"] = a.Result.String()
-	}
-	if a.ResultID.IsZero() {
-		result["id"] = ResultNoBadEgressDomain.String()
-	} else {
-		result["id"] = a.ResultID.String()
-	}
-	if len(a.Evidence) > 0 {
-		result["evidence"] = a.Evidence
+	result := ResultGood.String()
+	if !a.Result.IsZero() {
+		result = a.Result.String()
 	}
 
-	return json.Marshal(result)
+	id := ResultNoBadEgressDomain.String()
+	if !a.ResultID.IsZero() {
+		id = a.ResultID.String()
+	}
+
+	return json.Marshal(struct {
+		Result   string     `json:"result"`
+		ResultID string     `json:"id"`
+		Evidence []Evidence `json:"evidence,omitempty"`
+	}{
+		Result:   result,
+		ResultID: id,
+		Evidence: a.Evidence,
+	})
 }
 
 // Behavior Profile Event.
@@ -2802,28 +3044,53 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
+	created := struct {
+		UUID       *string     `json:"uuid,omitempty"`
+		Timestamp  *time.Time  `json:"timestamp,omitempty"`
+		Note       *string     `json:"note,omitempty"`
+		Metadata   *Metadata   `json:"metadata,omitempty"`
+		Attenuator *Attenuator `json:"attenuator,omitempty"`
+		Score      *Score      `json:"score,omitempty"`
+		Background *Background `json:"background,omitempty"`
+		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
+		Network    *NetProfile `json:"network,omitempty"`
+		Telemetry  *Telemetry  `json:"telemetry,omitempty"`
+		Assertions []Assertion `json:"assertions,omitempty"`
+	}{}
 
 	if !p.Base.IsZero() {
-		baseMap, err := p.Base.MarshalJSONMap()
-		if err != nil {
-			return nil, err
+		created.UUID = &p.UUID
+		created.Timestamp = &p.Timestamp
+
+		if p.Note != "" {
+			created.Note = &p.Note
 		}
-		for k, v := range baseMap {
-			result[k] = v
+		if !p.Metadata.IsZero() {
+			created.Metadata = &p.Metadata
+		}
+		if !p.Attenuator.IsZero() {
+			created.Attenuator = &p.Attenuator
+		}
+		if !p.Score.IsZero() {
+			created.Score = &p.Score
+		}
+		if !p.Background.IsZero() {
+			created.Background = &p.Background
+		}
+		if !p.Scenarios.IsZero() {
+			created.Scenarios = &p.Scenarios
 		}
 	}
 
 	if !p.Network.IsZero() {
-		result["network"] = p.Network
+		created.Network = &p.Network
 	}
 	if !p.Telemetry.IsZero() {
-		result["telemetry"] = p.Telemetry
+		created.Telemetry = &p.Telemetry
 	}
-
 	if len(p.Assertions) > 0 {
-		result["assertions"] = p.Assertions
+		created.Assertions = p.Assertions
 	}
 
-	return json.Marshal(result)
+	return json.Marshal(created)
 }

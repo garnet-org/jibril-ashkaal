@@ -49,7 +49,24 @@ func (s Scenarios) MarshalJSON() ([]byte, error) {
 	if s.IsZero() {
 		return []byte("null"), nil
 	}
-	return json.Marshal(s)
+
+	created := struct {
+		GitHub *ScenarioGitHub `json:"github,omitempty"`
+		HostOS *ScenarioHostOS `json:"hostos,omitempty"`
+		K8S    *ScenarioK8S    `json:"k8s,omitempty"`
+	}{}
+
+	if !s.GitHub.IsZero() {
+		created.GitHub = &s.GitHub
+	}
+	if !s.HostOS.IsZero() {
+		created.HostOS = &s.HostOS
+	}
+	if !s.K8S.IsZero() {
+		created.K8S = &s.K8S
+	}
+
+	return json.Marshal(created)
 }
 
 func (s Scenarios) MarshalJSONMap() (map[string]any, error) {
@@ -195,6 +212,74 @@ func (s ScenarioGitHub) IsZero() bool {
 		s.UpdateAt.IsZero()
 }
 
+func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+
+	return json.Marshal(struct {
+		ScenarioType      ScenarioTypeName `json:"scenario_type"`
+		Action            string           `json:"action"`
+		ID                string           `json:"id"`
+		Actor             string           `json:"actor"`
+		ActorID           string           `json:"actor_id"`
+		EventName         string           `json:"event_name"`
+		Job               string           `json:"job"`
+		Ref               string           `json:"ref"`
+		RefName           string           `json:"ref_name"`
+		RefProtected      string           `json:"ref_protected"`
+		RefType           string           `json:"ref_type"`
+		Repository        string           `json:"repository"`
+		RepositoryID      string           `json:"repository_id"`
+		RepositoryOwner   string           `json:"repository_owner"`
+		RepositoryOwnerID string           `json:"repository_owner_id"`
+		RunAttempt        string           `json:"run_attempt"`
+		RunID             string           `json:"run_id"`
+		RunNumber         string           `json:"run_number"`
+		RunnerArch        string           `json:"runner_arch"`
+		RunnerOS          string           `json:"runner_os"`
+		ServerURL         string           `json:"server_url"`
+		SHA               string           `json:"sha"`
+		TriggeringActor   string           `json:"triggering_actor"`
+		Workflow          string           `json:"workflow"`
+		WorkflowRef       string           `json:"workflow_ref"`
+		WorkflowSHA       string           `json:"workflow_sha"`
+		Workspace         string           `json:"workspace"`
+		CreatedAt         time.Time        `json:"created_at"`
+		UpdateAt          time.Time        `json:"updated_at"`
+	}{
+		ScenarioType:      ScenarioTypeGitHub,
+		Action:            s.Action,
+		ID:                s.ID,
+		Actor:             s.Actor,
+		ActorID:           s.ActorID,
+		EventName:         s.EventName,
+		Job:               s.Job,
+		Ref:               s.Ref,
+		RefName:           s.RefName,
+		RefProtected:      s.RefProtected,
+		RefType:           s.RefType,
+		Repository:        s.Repository,
+		RepositoryID:      s.RepositoryID,
+		RepositoryOwner:   s.RepositoryOwner,
+		RepositoryOwnerID: s.RepositoryOwnerID,
+		RunAttempt:        s.RunAttempt,
+		RunID:             s.RunID,
+		RunNumber:         s.RunNumber,
+		RunnerArch:        s.RunnerArch,
+		RunnerOS:          s.RunnerOS,
+		ServerURL:         s.ServerURL,
+		SHA:               s.SHA,
+		TriggeringActor:   s.TriggeringActor,
+		Workflow:          s.Workflow,
+		WorkflowRef:       s.WorkflowRef,
+		WorkflowSHA:       s.WorkflowSHA,
+		Workspace:         s.Workspace,
+		CreatedAt:         s.CreatedAt,
+		UpdateAt:          s.UpdateAt,
+	})
+}
+
 func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 	if s.IsZero() {
 		return nil, nil
@@ -280,6 +365,28 @@ func (s ScenarioHostOS) IsZero() bool {
 		s.Arch == ""
 }
 
+func (s ScenarioHostOS) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+
+	return json.Marshal(struct {
+		ScenarioType ScenarioTypeName `json:"scenario_type"`
+		MachineID    string           `json:"machine_id"`
+		Hostname     string           `json:"hostname"`
+		IP           string           `json:"ip"`
+		OS           string           `json:"os"`
+		Arch         string           `json:"arch"`
+	}{
+		ScenarioType: ScenarioTypeHostOS,
+		MachineID:    s.MachineID,
+		Hostname:     s.Hostname,
+		IP:           s.IP,
+		OS:           s.OS,
+		Arch:         s.Arch,
+	})
+}
+
 func (s ScenarioHostOS) MarshalJSONMap() (map[string]any, error) {
 	if s.IsZero() {
 		return nil, nil
@@ -327,6 +434,26 @@ func (s ScenarioK8S) IsZero() bool {
 		s.Namespace == "" &&
 		s.Pod == "" &&
 		s.Node == ""
+}
+
+func (s ScenarioK8S) MarshalJSON() ([]byte, error) {
+	if s.IsZero() {
+		return []byte("null"), nil
+	}
+
+	return json.Marshal(struct {
+		ScenarioType ScenarioTypeName `json:"scenario_type"`
+		Cluster      string           `json:"cluster"`
+		Namespace    string           `json:"namespace"`
+		Pod          string           `json:"pod"`
+		Node         string           `json:"node"`
+	}{
+		ScenarioType: ScenarioTypeK8S,
+		Cluster:      s.Cluster,
+		Namespace:    s.Namespace,
+		Pod:          s.Pod,
+		Node:         s.Node,
+	})
 }
 
 func (s ScenarioK8S) MarshalJSONMap() (map[string]any, error) {
