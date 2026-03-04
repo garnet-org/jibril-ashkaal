@@ -547,3 +547,46 @@ func TestProfile(t *testing.T) {
 		t.Errorf("Profile mismatch (-want +got):\n%s", diff)
 	}
 }
+
+func TestBackground_UnmarshalJSON_Compatibility(t *testing.T) {
+	newJSON := `{
+"file_list":[{"uuid":"file-1","path":"/a","dir":"/","basename":"a","type":"regular","owner":{"uid":0,"gid":0},"actions":{"actions":null},"permissions":{"mode":""},"metadata":{"size":0},"file_hash":0,"dir_hash":0,"base_hash":0}],
+"flow_list":[{"uuid":"flow-1","ip_version":4,"proto":"tcp","local":{"addr":"10.0.0.1","port":1},"remote":{"addr":"10.0.0.2","port":2},"service_port":0,"flags":{},"phase":{}}],
+"ancestry":[]
+}`
+
+	var bg Background
+	err := json.Unmarshal([]byte(newJSON), &bg)
+	assert.NoError(t, err)
+	assert.Equal(t, 1, len(bg.Files))
+	assert.Equal(t, 1, len(bg.Flows))
+	assert.True(t, bg.LegacyFiles.IsZero())
+	assert.True(t, bg.LegacyFlows.IsZero())
+
+	b, err := json.Marshal(bg)
+	assert.NoError(t, err)
+	assert.Contains(t, string(b), `"file_list"`)
+	assert.Contains(t, string(b), `"flow_list"`)
+	assert.NotContains(t, string(b), `"files"`)
+	assert.NotContains(t, string(b), `"flows"`)
+
+	legacyJSON := `{
+"files":{"root":{"path":"/","base":"/","dirs":[],"files":[],"dir_hash":1}},
+"flows":{"ip_version":4,"protocols":[],"total_flows":1}
+}`
+
+	var legacy Background
+	err = json.Unmarshal([]byte(legacyJSON), &legacy)
+	assert.NoError(t, err)
+	assert.Equal(t, 0, len(legacy.Files))
+	assert.Equal(t, 0, len(legacy.Flows))
+	assert.False(t, legacy.LegacyFiles.IsZero())
+	assert.False(t, legacy.LegacyFlows.IsZero())
+
+	b, err = json.Marshal(legacy)
+	assert.NoError(t, err)
+	assert.Contains(t, string(b), `"files"`)
+	assert.Contains(t, string(b), `"flows"`)
+	assert.NotContains(t, string(b), `"file_list"`)
+	assert.NotContains(t, string(b), `"flow_list"`)
+}
