@@ -328,12 +328,30 @@ type Background struct {
 }
 
 func (b Background) Clone() Background {
-	ancestry := make([]Process, len(b.Ancestry))
-	copy(ancestry, b.Ancestry)
-	files := make([]File, len(b.Files))
-	copy(files, b.Files)
-	flows := make([]Flow, len(b.Flows))
-	copy(flows, b.Flows)
+	// Filter non-zero ancestry.
+	ancestry := make([]Process, 0, len(b.Ancestry))
+	for _, p := range b.Ancestry {
+		if !p.IsZero() {
+			ancestry = append(ancestry, p)
+		}
+	}
+
+	// Filter non-zero files.
+	files := make([]File, 0, len(b.Files))
+	for _, f := range b.Files {
+		if !f.IsZero() {
+			files = append(files, f)
+		}
+	}
+
+	// Filter non-zero flows.
+	flows := make([]Flow, 0, len(b.Flows))
+	for _, fl := range b.Flows {
+		if !fl.IsZero() {
+			flows = append(flows, fl)
+		}
+	}
+
 	return Background{
 		Containers:  b.Containers.Clone(),
 		Files:       files,
@@ -358,8 +376,25 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	hasNewFiles := len(b.Files) > 0
-	hasNewFlows := len(b.Flows) > 0
+	// Filter non-zero files.
+	filteredFiles := make([]File, 0, len(b.Files))
+	for _, f := range b.Files {
+		if !f.IsZero() {
+			filteredFiles = append(filteredFiles, f)
+		}
+	}
+
+	// Filter non-zero flows.
+	filteredFlows := make([]Flow, 0, len(b.Flows))
+	for _, fl := range b.Flows {
+		if !fl.IsZero() {
+			filteredFlows = append(filteredFlows, fl)
+		}
+	}
+
+	// Check if there are new files or flows.
+	hasFiles := len(filteredFiles) > 0
+	hasFlows := len(filteredFlows) > 0
 	hasLegacyFiles := !b.LegacyFiles.IsZero()
 	hasLegacyFlows := !b.LegacyFlows.IsZero()
 
@@ -374,19 +409,19 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		Ancestry: b.Ancestry,
 	}
 
-	// Only makes sense to include the full type if sub-type is not empty.
+	// Only include containers if not zero and contains at least one element.
 	if !b.Containers.IsZero() && len(b.Containers.Containers) > 0 {
 		created.Containers = &b.Containers
 	}
 
-	if hasNewFiles {
-		created.Files = b.Files
+	if hasFiles {
+		created.Files = filteredFiles
 	} else if hasLegacyFiles {
 		created.LegacyFiles = &b.LegacyFiles
 	}
 
-	if hasNewFlows {
-		created.Flows = b.Flows
+	if hasFlows {
+		created.Flows = filteredFlows
 	} else if hasLegacyFlows {
 		created.LegacyFlows = &b.LegacyFlows
 	}
