@@ -363,19 +363,42 @@ func (b Background) Clone() Background {
 }
 
 func (b Background) IsZero() bool {
+	// Filter non-zero files.
+	filesNonZero := false
+	for _, f := range b.Files {
+		if !f.IsZero() {
+			filesNonZero = true
+			break
+		}
+	}
+
+	// Filter non-zero flows.
+	flowsNonZero := false
+	for _, fl := range b.Flows {
+		if !fl.IsZero() {
+			flowsNonZero = true
+			break
+		}
+	}
+
+	// Filter non-zero ancestry.
+	ancestryNonZero := false
+	for _, p := range b.Ancestry {
+		if !p.IsZero() {
+			ancestryNonZero = true
+			break
+		}
+	}
+
 	return b.Containers.IsZero() &&
-		len(b.Files) == 0 &&
-		len(b.Flows) == 0 &&
-		len(b.Ancestry) == 0 &&
+		!filesNonZero &&
+		!flowsNonZero &&
+		!ancestryNonZero &&
 		b.LegacyFiles.IsZero() &&
 		b.LegacyFlows.IsZero()
 }
 
 func (b Background) MarshalJSON() ([]byte, error) {
-	if b.IsZero() {
-		return []byte("null"), nil
-	}
-
 	// Filter non-zero files.
 	filteredFiles := make([]File, 0, len(b.Files))
 	for _, f := range b.Files {
@@ -392,11 +415,25 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		}
 	}
 
-	// Check if there are new files or flows.
+	// Filter non-zero ancestry.
+	filteredAncestry := make([]Process, 0, len(b.Ancestry))
+	for _, p := range b.Ancestry {
+		if !p.IsZero() {
+			filteredAncestry = append(filteredAncestry, p)
+		}
+	}
+
 	hasFiles := len(filteredFiles) > 0
 	hasFlows := len(filteredFlows) > 0
+	hasAncestry := len(filteredAncestry) > 0
 	hasLegacyFiles := !b.LegacyFiles.IsZero()
 	hasLegacyFlows := !b.LegacyFlows.IsZero()
+	hasContainers := !b.Containers.IsZero() && len(b.Containers.Containers) > 0
+
+	if !hasContainers && !hasFiles && !hasFlows &&
+		!hasAncestry && !hasLegacyFiles && !hasLegacyFlows {
+		return []byte("null"), nil
+	}
 
 	created := struct {
 		Containers  *Containers    `json:"containers,omitempty"`
@@ -405,24 +442,24 @@ func (b Background) MarshalJSON() ([]byte, error) {
 		Ancestry    []Process      `json:"ancestry,omitempty"`
 		LegacyFiles *FileAggregate `json:"files,omitempty"`
 		LegacyFlows *FlowAggregate `json:"flows,omitempty"`
-	}{
-		Ancestry: b.Ancestry,
-	}
+	}{}
 
-	// Only include containers if not zero and contains at least one element.
-	if !b.Containers.IsZero() && len(b.Containers.Containers) > 0 {
+	if hasContainers {
 		created.Containers = &b.Containers
 	}
-
 	if hasFiles {
 		created.Files = filteredFiles
-	} else if hasLegacyFiles {
-		created.LegacyFiles = &b.LegacyFiles
 	}
-
 	if hasFlows {
 		created.Flows = filteredFlows
-	} else if hasLegacyFlows {
+	}
+	if hasAncestry {
+		created.Ancestry = filteredAncestry
+	}
+	if hasLegacyFiles {
+		created.LegacyFiles = &b.LegacyFiles
+	}
+	if hasLegacyFlows {
 		created.LegacyFlows = &b.LegacyFlows
 	}
 
@@ -2289,19 +2326,27 @@ func (c Container) MarshalJSON() ([]byte, error) {
 // ProcessTree.
 
 type ProcessTree struct {
-	Process  string   `json:"process"`
-	Ancestry []string `json:"ancestry"`
+	Process    string   `json:"process"`
+	Executable string   `json:"executable"`
+	Arguments  string   `json:"arguments"`
+	GitHubStep string   `json:"github_step"`
+	Ancestry   []string `json:"ancestry"`
 }
 
 func (pt ProcessTree) Clone() ProcessTree {
 	return ProcessTree{
-		Process:  pt.Process,
-		Ancestry: append([]string(nil), pt.Ancestry...),
+		Process:    pt.Process,
+		Executable: pt.Executable,
+		Arguments:  pt.Arguments,
+		GitHubStep: pt.GitHubStep,
+		Ancestry:   append([]string(nil), pt.Ancestry...),
 	}
 }
 
 func (pt ProcessTree) IsZero() bool {
 	return pt.Process == "" &&
+		pt.Executable == "" &&
+		pt.Arguments == "" &&
 		len(pt.Ancestry) == 0
 }
 
@@ -2311,11 +2356,17 @@ func (pt ProcessTree) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(struct {
-		Process  string   `json:"process,omitempty"`
-		Ancestry []string `json:"ancestry,omitempty"`
+		Process    string   `json:"process,omitempty"`
+		Executable string   `json:"executable,omitempty"`
+		Arguments  string   `json:"arguments,omitempty"`
+		GitHubStep string   `json:"github_step,omitempty"`
+		Ancestry   []string `json:"ancestry,omitempty"`
 	}{
-		Process:  pt.Process,
-		Ancestry: pt.Ancestry,
+		Process:    pt.Process,
+		Executable: pt.Executable,
+		Arguments:  pt.Arguments,
+		GitHubStep: pt.GitHubStep,
+		Ancestry:   pt.Ancestry,
 	})
 }
 
