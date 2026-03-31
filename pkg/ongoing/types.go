@@ -28,6 +28,8 @@ var legacyTimeLayouts = [...]string{
 	"2006-01-02T15:04:05",
 }
 
+// legacyTime is a wrapper around time.Time to support multiple legacy time formats during JSON unmarshaling.
+// It is here because older types used to use string instead of time.Time for timestamps.
 type legacyTime struct {
 	time.Time
 }
