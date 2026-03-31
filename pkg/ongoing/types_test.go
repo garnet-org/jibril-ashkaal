@@ -68,6 +68,207 @@ func TestScore_MarshalJSON(t *testing.T) {
 	assert.NotContains(t, string(b), "risk_score")
 }
 
+func TestBase_UnmarshalJSON_LegacyTimeLayouts(t *testing.T) {
+	testCases := []struct {
+		name      string
+		timestamp string
+		want      time.Time
+	}{
+		{
+			name:      "rfc3339nano",
+			timestamp: "2026-02-12T10:15:00.123456789Z",
+			want:      time.Date(2026, 2, 12, 10, 15, 0, 123456789, time.UTC),
+		},
+		{
+			name:      "space_nanos",
+			timestamp: "2026-02-12 10:15:00.123456789",
+			want:      time.Date(2026, 2, 12, 10, 15, 0, 123456789, time.UTC),
+		},
+		{
+			name:      "space_seconds",
+			timestamp: "2026-02-12 10:15:00",
+			want:      time.Date(2026, 2, 12, 10, 15, 0, 0, time.UTC),
+		},
+		{
+			name:      "t_nanos",
+			timestamp: "2026-02-12T10:15:00.123456789",
+			want:      time.Date(2026, 2, 12, 10, 15, 0, 123456789, time.UTC),
+		},
+		{
+			name:      "t_seconds",
+			timestamp: "2026-02-12T10:15:00",
+			want:      time.Date(2026, 2, 12, 10, 15, 0, 0, time.UTC),
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			payload := []byte(`{"uuid":"det-001","timestamp":"` + tc.timestamp + `"}`)
+
+			var got Base
+			err := json.Unmarshal(payload, &got)
+			assert.NoError(t, err)
+			assert.Equal(t, "det-001", got.UUID)
+			assert.Equal(t, tc.want, got.Timestamp)
+		})
+	}
+}
+
+func TestEventTypes_UnmarshalJSON_LegacyTimestamp(t *testing.T) {
+	payload := []byte(`{"uuid":"det-001","timestamp":"2026-02-12 10:15:00"}`)
+	want := time.Date(2026, 2, 12, 10, 15, 0, 0, time.UTC)
+
+	testCases := []struct {
+		name   string
+		decode func([]byte) (time.Time, error)
+	}{
+		{
+			name: "file_access",
+			decode: func(data []byte) (time.Time, error) {
+				var got FileAccess
+				err := json.Unmarshal(data, &got)
+				return got.Timestamp, err
+			},
+		},
+		{
+			name: "execution",
+			decode: func(data []byte) (time.Time, error) {
+				var got Execution
+				err := json.Unmarshal(data, &got)
+				return got.Timestamp, err
+			},
+		},
+		{
+			name: "network_peer",
+			decode: func(data []byte) (time.Time, error) {
+				var got NetworkPeer
+				err := json.Unmarshal(data, &got)
+				return got.Timestamp, err
+			},
+		},
+		{
+			name: "network_flow",
+			decode: func(data []byte) (time.Time, error) {
+				var got NetworkFlow
+				err := json.Unmarshal(data, &got)
+				return got.Timestamp, err
+			},
+		},
+		{
+			name: "drop_ip",
+			decode: func(data []byte) (time.Time, error) {
+				var got DropIP
+				err := json.Unmarshal(data, &got)
+				return got.Timestamp, err
+			},
+		},
+	}
+
+	for _, tc := range testCases {
+		t.Run(tc.name, func(t *testing.T) {
+			got, err := tc.decode(payload)
+			assert.NoError(t, err)
+			assert.Equal(t, want, got)
+		})
+	}
+}
+
+func TestProfile_UnmarshalJSON_LegacyNestedTimes(t *testing.T) {
+	payload := []byte(`{
+		"uuid":"profile-001",
+		"timestamp":"2026-02-12T10:15:00",
+		"background":{
+			"ancestry":[{
+				"start":"2026-02-12 10:14:00",
+				"exit":"2026-02-12T10:14:59.123456789"
+			}],
+			"file_list":[{
+				"metadata":{
+					"access":"2026-02-12 10:13:00",
+					"change":"2026-02-12T10:12:00",
+					"creation":"2026-02-01 08:00:00"
+				}
+			}],
+			"containers":{
+				"containers":[{
+					"id":"ctr-001",
+					"created_at":"2026-02-12 09:00:00",
+					"started_at":"2026-02-12T09:01:00",
+					"finished_at":"2026-02-12T11:00:00.123456789"
+				}]
+			}
+		},
+		"assertions":[{
+			"result":"pass",
+			"id":"no_bad_egress_domain",
+			"evidence":[{
+				"timestamp":"2026-02-12 10:11:00",
+				"event_name":"evt-001"
+			}]
+		}]
+	}`)
+
+	var got Profile
+	err := json.Unmarshal(payload, &got)
+	assert.NoError(t, err)
+
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 10, 15, 0, 0, time.UTC),
+		got.Timestamp,
+	)
+	assert.Equal(t, 1, len(got.Background.Ancestry))
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 10, 14, 0, 0, time.UTC),
+		got.Background.Ancestry[0].Start,
+	)
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 10, 14, 59, 123456789, time.UTC),
+		got.Background.Ancestry[0].Exit,
+	)
+	assert.Equal(t, 1, len(got.Background.Files))
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 10, 13, 0, 0, time.UTC),
+		got.Background.Files[0].Metadata.Access,
+	)
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 10, 12, 0, 0, time.UTC),
+		got.Background.Files[0].Metadata.Change,
+	)
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 1, 8, 0, 0, 0, time.UTC),
+		got.Background.Files[0].Metadata.Creation,
+	)
+	assert.Equal(t, 1, len(got.Background.Containers.Containers))
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 9, 0, 0, 0, time.UTC),
+		got.Background.Containers.Containers[0].CreatedAt,
+	)
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 9, 1, 0, 0, time.UTC),
+		got.Background.Containers.Containers[0].StartedAt,
+	)
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 11, 0, 0, 123456789, time.UTC),
+		got.Background.Containers.Containers[0].FinishedAt,
+	)
+	assert.Equal(t, 1, len(got.Assertions))
+	assert.Equal(t, 1, len(got.Assertions[0].Evidence))
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 10, 11, 0, 0, time.UTC),
+		got.Assertions[0].Evidence[0].Timestamp,
+	)
+}
+
 func TestProfile(t *testing.T) {
 	want := Profile{
 		Base: Base{
