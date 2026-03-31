@@ -20,6 +20,63 @@ type Base struct {
 	Scenarios  Scenarios  `json:"scenarios"`  // GitHub, Kubernetes, Host, etc.
 }
 
+var legacyTimeLayouts = [...]string{
+	time.RFC3339Nano,
+	"2006-01-02 15:04:05.999999999",
+	"2006-01-02 15:04:05",
+	"2006-01-02T15:04:05.999999999",
+	"2006-01-02T15:04:05",
+}
+
+// legacyTime is a wrapper around time.Time to support multiple legacy time formats during JSON unmarshaling.
+// It is here because older types used to use string instead of time.Time for timestamps.
+type legacyTime struct {
+	time.Time
+}
+
+func (lt *legacyTime) UnmarshalJSON(data []byte) error {
+	parsed, err := parseLegacyTime(data)
+	if err != nil {
+		return err
+	}
+
+	lt.Time = parsed
+
+	return nil
+}
+
+func parseLegacyTime(data []byte) (time.Time, error) {
+	if string(data) == "null" {
+		return time.Time{}, nil
+	}
+
+	var parsed time.Time
+	if err := json.Unmarshal(data, &parsed); err == nil {
+		return parsed, nil
+	}
+
+	var value string
+	if err := json.Unmarshal(data, &value); err != nil {
+		return time.Time{}, fmt.Errorf("invalid time payload: %s", string(data))
+	}
+
+	value = strings.TrimSpace(value)
+	if value == "" {
+		return time.Time{}, nil
+	}
+
+	for _, layout := range legacyTimeLayouts {
+		parsed, err := time.Parse(layout, value)
+		if err == nil {
+			return parsed, nil
+		}
+	}
+
+	return time.Time{}, fmt.Errorf("invalid time value: %q", value)
+}
+
+type baseAlias Base
+
 // NOTE: Multiple events with the same UUID are typically treated as the same event, but
 // with increasingly complete context. Keeping only the most recent event is a reasonable
 // approach. However, if possible, merging the context of all such events is ideal.
@@ -125,6 +182,28 @@ func (b Base) MarshalJSONMap() (map[string]any, error) {
 	}
 
 	return result, nil
+}
+
+func (b *Base) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*b = Base{}
+		return nil
+	}
+
+	type basePayload struct {
+		baseAlias
+		Timestamp legacyTime `json:"timestamp"`
+	}
+
+	var decoded basePayload
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*b = Base(decoded.baseAlias)
+	b.Timestamp = decoded.Timestamp.Time
+
+	return nil
 }
 
 // Detection Event Metadata.
@@ -539,6 +618,33 @@ func (f FileAccess) MarshalJSON() ([]byte, error) {
 	return json.Marshal(created)
 }
 
+func (f *FileAccess) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*f = FileAccess{}
+		return nil
+	}
+
+	var decoded struct {
+		baseAlias
+		Timestamp legacyTime `json:"timestamp"`
+		File      File       `json:"file"`
+		Process   Process    `json:"process"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*f = FileAccess{
+		Base:    Base(decoded.baseAlias),
+		File:    decoded.File,
+		Process: decoded.Process,
+	}
+	f.Timestamp = decoded.Timestamp.Time
+
+	return nil
+}
+
 // Execution Detection Event.
 
 type Execution struct {
@@ -610,6 +716,33 @@ func (e Execution) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(created)
+}
+
+func (e *Execution) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*e = Execution{}
+		return nil
+	}
+
+	var decoded struct {
+		baseAlias
+		Timestamp legacyTime `json:"timestamp"`
+		File      File       `json:"file"`
+		Process   Process    `json:"process"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*e = Execution{
+		Base:    Base(decoded.baseAlias),
+		File:    decoded.File,
+		Process: decoded.Process,
+	}
+	e.Timestamp = decoded.Timestamp.Time
+
+	return nil
 }
 
 // Network Peers Detection Event.
@@ -685,6 +818,33 @@ func (n NetworkPeer) MarshalJSON() ([]byte, error) {
 	return json.Marshal(created)
 }
 
+func (n *NetworkPeer) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*n = NetworkPeer{}
+		return nil
+	}
+
+	var decoded struct {
+		baseAlias
+		Timestamp legacyTime `json:"timestamp"`
+		Process   Process    `json:"process"`
+		Flow      Flow       `json:"flow"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*n = NetworkPeer{
+		Base:    Base(decoded.baseAlias),
+		Process: decoded.Process,
+		Flow:    decoded.Flow,
+	}
+	n.Timestamp = decoded.Timestamp.Time
+
+	return nil
+}
+
 // Network Flow Event.
 
 type NetworkFlow struct {
@@ -755,6 +915,33 @@ func (n NetworkFlow) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(created)
+}
+
+func (n *NetworkFlow) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*n = NetworkFlow{}
+		return nil
+	}
+
+	var decoded struct {
+		baseAlias
+		Timestamp legacyTime `json:"timestamp"`
+		Process   Process    `json:"process"`
+		Flow      Flow       `json:"flow"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*n = NetworkFlow{
+		Base:    Base(decoded.baseAlias),
+		Process: decoded.Process,
+		Flow:    decoded.Flow,
+	}
+	n.Timestamp = decoded.Timestamp.Time
+
+	return nil
 }
 
 // Drop IP Detection Event.
@@ -838,6 +1025,37 @@ func (d DropIP) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(created)
+}
+
+func (d *DropIP) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*d = DropIP{}
+		return nil
+	}
+
+	var decoded struct {
+		baseAlias
+		Timestamp legacyTime `json:"timestamp"`
+		IP        string     `json:"ip"`
+		Names     []string   `json:"names"`
+		Process   Process    `json:"process"`
+		Flow      Flow       `json:"flow"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*d = DropIP{
+		Base:    Base(decoded.baseAlias),
+		IP:      decoded.IP,
+		Names:   decoded.Names,
+		Process: decoded.Process,
+		Flow:    decoded.Flow,
+	}
+	d.Timestamp = decoded.Timestamp.Time
+
+	return nil
 }
 
 // Process.
@@ -982,6 +1200,31 @@ func (p Process) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(created)
+}
+
+func (p *Process) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*p = Process{}
+		return nil
+	}
+
+	type processAlias Process
+
+	var decoded struct {
+		processAlias
+		Start legacyTime `json:"start"`
+		Exit  legacyTime `json:"exit"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*p = Process(decoded.processAlias)
+	p.Start = decoded.Start.Time
+	p.Exit = decoded.Exit.Time
+
+	return nil
 }
 
 // Namespaces.
@@ -1274,6 +1517,33 @@ func (f FileMetadata) MarshalJSON() ([]byte, error) {
 		Change:   f.Change,
 		Creation: f.Creation,
 	})
+}
+
+func (f *FileMetadata) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*f = FileMetadata{}
+		return nil
+	}
+
+	type fileMetadataAlias FileMetadata
+
+	var decoded struct {
+		fileMetadataAlias
+		Access   legacyTime `json:"access"`
+		Change   legacyTime `json:"change"`
+		Creation legacyTime `json:"creation"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*f = FileMetadata(decoded.fileMetadataAlias)
+	f.Access = decoded.Access.Time
+	f.Change = decoded.Change.Time
+	f.Creation = decoded.Creation.Time
+
+	return nil
 }
 
 // File Actions.
@@ -2319,6 +2589,33 @@ func (c Container) MarshalJSON() ([]byte, error) {
 	return json.Marshal(created)
 }
 
+func (c *Container) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*c = Container{}
+		return nil
+	}
+
+	type containerAlias Container
+
+	var decoded struct {
+		containerAlias
+		CreatedAt  legacyTime `json:"created_at"`
+		StartedAt  legacyTime `json:"started_at"`
+		FinishedAt legacyTime `json:"finished_at"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*c = Container(decoded.containerAlias)
+	c.CreatedAt = decoded.CreatedAt.Time
+	c.StartedAt = decoded.StartedAt.Time
+	c.FinishedAt = decoded.FinishedAt.Time
+
+	return nil
+}
+
 //
 // Profiling event.
 //
@@ -2816,6 +3113,29 @@ func (e Evidence) MarshalJSON() ([]byte, error) {
 	return json.Marshal(created)
 }
 
+func (e *Evidence) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*e = Evidence{}
+		return nil
+	}
+
+	type evidenceAlias Evidence
+
+	var decoded struct {
+		evidenceAlias
+		Timestamp legacyTime `json:"timestamp"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*e = Evidence(decoded.evidenceAlias)
+	e.Timestamp = decoded.Timestamp.Time
+
+	return nil
+}
+
 // ResultID: A unique identifier for a result.
 
 type ResultID uint64
@@ -3198,4 +3518,33 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(created)
+}
+
+func (p *Profile) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*p = Profile{}
+		return nil
+	}
+
+	var decoded struct {
+		baseAlias
+		Timestamp  legacyTime  `json:"timestamp"`
+		Network    NetProfile  `json:"network"`
+		Telemetry  Telemetry   `json:"telemetry"`
+		Assertions []Assertion `json:"assertions"`
+	}
+
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*p = Profile{
+		Base:       Base(decoded.baseAlias),
+		Network:    decoded.Network,
+		Telemetry:  decoded.Telemetry,
+		Assertions: decoded.Assertions,
+	}
+	p.Timestamp = decoded.Timestamp.Time
+
+	return nil
 }
