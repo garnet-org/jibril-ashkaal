@@ -30,6 +30,7 @@ var legacyTimeLayouts = [...]string{
 
 // legacyTime is a wrapper around time.Time to support multiple legacy time formats during JSON unmarshaling.
 // It is here because older types used to use string instead of time.Time for timestamps.
+// It also treats legacy sentinel values like "running" as an empty timestamp.
 type legacyTime struct {
 	time.Time
 }
@@ -61,7 +62,7 @@ func parseLegacyTime(data []byte) (time.Time, error) {
 	}
 
 	value = strings.TrimSpace(value)
-	if value == "" {
+	if value == "" || strings.EqualFold(value, "running") {
 		return time.Time{}, nil
 	}
 

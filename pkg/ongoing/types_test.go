@@ -114,6 +114,28 @@ func TestBase_UnmarshalJSON_LegacyTimeLayouts(t *testing.T) {
 	}
 }
 
+func TestLegacyTime_UnmarshalJSON_Running(t *testing.T) {
+	var got legacyTime
+	err := got.UnmarshalJSON([]byte(`"running"`))
+	assert.NoError(t, err)
+	assert.True(t, got.Time.IsZero())
+}
+
+func TestProcess_UnmarshalJSON_RunningExit(t *testing.T) {
+	payload := []byte(`{"uuid":"proc-001","start":"2026-02-12 10:15:00","exit":"running"}`)
+
+	var got Process
+	err := json.Unmarshal(payload, &got)
+	assert.NoError(t, err)
+	assert.Equal(t, "proc-001", got.UUID)
+	assert.Equal(
+		t,
+		time.Date(2026, 2, 12, 10, 15, 0, 0, time.UTC),
+		got.Start,
+	)
+	assert.True(t, got.Exit.IsZero())
+}
+
 func TestEventTypes_UnmarshalJSON_LegacyTimestamp(t *testing.T) {
 	payload := []byte(`{"uuid":"det-001","timestamp":"2026-02-12 10:15:00"}`)
 	want := time.Date(2026, 2, 12, 10, 15, 0, 0, time.UTC)
