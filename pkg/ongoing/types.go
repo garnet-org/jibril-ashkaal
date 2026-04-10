@@ -373,14 +373,39 @@ func (b Background) Clone() Background {
 }
 
 func (b Background) IsZero() bool {
+	// Filter non-zero ancestry.
+	ancestryNonZero := false
+	for _, p := range b.Ancestry {
+		if !p.IsZero() {
+			ancestryNonZero = true
+			break
+		}
+	}
+
 	return b.Files.IsZero() &&
 		b.Flows.IsZero() &&
 		b.Containers.IsZero() &&
-		len(b.Ancestry) == 0
+		!ancestryNonZero
 }
 
 func (b Background) MarshalJSON() ([]byte, error) {
 	if b.IsZero() {
+		return []byte("null"), nil
+	}
+
+	// Filter non-zero ancestry.
+	filteredAncestry := make([]Process, 0, len(b.Ancestry))
+	for _, p := range b.Ancestry {
+		if !p.IsZero() {
+			filteredAncestry = append(filteredAncestry, p)
+		}
+	}
+
+	hasAncestry := len(filteredAncestry) > 0
+	hasContainers := !b.Containers.IsZero() && len(b.Containers.Containers) > 0
+
+	if !hasContainers && b.Files.IsZero() &&
+		b.Flows.IsZero() && !hasAncestry {
 		return []byte("null"), nil
 	}
 
@@ -1981,19 +2006,27 @@ func (c Container) MarshalJSON() ([]byte, error) {
 // ProcessTree.
 
 type ProcessTree struct {
-	Process  string   `json:"process"`
-	Ancestry []string `json:"ancestry"`
+	Process    string   `json:"process"`
+	Executable string   `json:"executable"`
+	Arguments  string   `json:"arguments"`
+	GitHubStep string   `json:"github_step"`
+	Ancestry   []string `json:"ancestry"`
 }
 
 func (pt ProcessTree) Clone() ProcessTree {
 	return ProcessTree{
-		Process:  pt.Process,
-		Ancestry: append([]string(nil), pt.Ancestry...),
+		Process:    pt.Process,
+		Executable: pt.Executable,
+		Arguments:  pt.Arguments,
+		GitHubStep: pt.GitHubStep,
+		Ancestry:   append([]string(nil), pt.Ancestry...),
 	}
 }
 
 func (pt ProcessTree) IsZero() bool {
 	return pt.Process == "" &&
+		pt.Executable == "" &&
+		pt.Arguments == "" &&
 		len(pt.Ancestry) == 0
 }
 
@@ -2002,16 +2035,19 @@ func (pt ProcessTree) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	result := make(map[string]any)
-
-	if pt.Process != "" {
-		result["process"] = pt.Process
-	}
-	if len(pt.Ancestry) > 0 {
-		result["ancestry"] = pt.Ancestry
-	}
-
-	return json.Marshal(result)
+	return json.Marshal(struct {
+		Process    string   `json:"process,omitempty"`
+		Executable string   `json:"executable,omitempty"`
+		Arguments  string   `json:"arguments,omitempty"`
+		GitHubStep string   `json:"github_step,omitempty"`
+		Ancestry   []string `json:"ancestry,omitempty"`
+	}{
+		Process:    pt.Process,
+		Executable: pt.Executable,
+		Arguments:  pt.Arguments,
+		GitHubStep: pt.GitHubStep,
+		Ancestry:   pt.Ancestry,
+	})
 }
 
 func (pt ProcessTree) String() string {
