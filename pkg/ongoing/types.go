@@ -432,7 +432,8 @@ func (b Background) MarshalJSON() ([]byte, error) {
 
 type FileAccess struct {
 	Base
-	File File `json:"file"`
+	Process Process `json:"process"`
+	File    File    `json:"file"`
 }
 
 func (f FileAccess) Clone() FileAccess {
@@ -518,7 +519,8 @@ func (e Execution) MarshalJSON() ([]byte, error) {
 
 type NetworkPeer struct {
 	Base
-	Flow Flow `json:"flow"`
+	Process Process `json:"process"`
+	Flow    Flow    `json:"flow"`
 }
 
 func (n NetworkPeer) Clone() NetworkPeer {
@@ -561,7 +563,8 @@ func (n NetworkPeer) MarshalJSON() ([]byte, error) {
 
 type NetworkFlow struct {
 	Base
-	Flow Flow `json:"flow"`
+	Process Process `json:"process"`
+	Flow    Flow    `json:"flow"`
 }
 
 func (n NetworkFlow) Clone() NetworkFlow {
@@ -604,9 +607,10 @@ func (n NetworkFlow) MarshalJSON() ([]byte, error) {
 
 type DropIP struct {
 	Base
-	IP    string   `json:"ip"`    // The IP that was dropped.
-	Names []string `json:"names"` // The names of the IP.
-	Flow  Flow     `json:"flow"`  // The flow that triggered the drop.
+	Process Process  `json:"process"`
+	IP      string   `json:"ip"`    // The IP that was dropped.
+	Names   []string `json:"names"` // The names of the IP.
+	Flow    Flow     `json:"flow"`  // The flow that triggered the drop.
 }
 
 func (d DropIP) Clone() DropIP {
