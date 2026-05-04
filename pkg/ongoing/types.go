@@ -3387,9 +3387,11 @@ func (r Result) Number() int {
 // Assertion: A list of evidence that supports the assertion.
 
 type Assertion struct {
-	Result   Result     `json:"result"`   // Result of the assertion.
-	ResultID ResultID   `json:"id"`       // Result ID.
-	Evidence []Evidence `json:"evidence"` // Detections supporting the result.
+	ClassID     string     `json:"class_id,omitempty"`     // Class ID of assertion.
+	AssertionID string     `json:"assertion_id,omitempty"` // Assertion ID.
+	Result      Result     `json:"result"`                 // Result of the assertion.
+	ResultID    ResultID   `json:"id"`                     // Result ID.
+	Evidence    []Evidence `json:"evidence"`               // Detections supporting the result.
 }
 
 func (a Assertion) Clone() Assertion {
@@ -3398,14 +3400,18 @@ func (a Assertion) Clone() Assertion {
 		evidence[i] = e.Clone()
 	}
 	return Assertion{
-		Result:   a.Result,
-		ResultID: a.ResultID,
-		Evidence: evidence,
+		ClassID:     a.ClassID,
+		AssertionID: a.AssertionID,
+		Result:      a.Result,
+		ResultID:    a.ResultID,
+		Evidence:    evidence,
 	}
 }
 
 func (a Assertion) IsZero() bool {
-	return a.Result.IsZero() &&
+	return a.ClassID == "" &&
+		a.AssertionID == "" &&
+		a.Result.IsZero() &&
 		a.ResultID.IsZero() &&
 		len(a.Evidence) == 0
 }
@@ -3420,19 +3426,23 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 		result = a.Result.String()
 	}
 
-	id := ResultNoBadEgressDomain.String()
+	resultID := ResultNoBadEgressDomain.String()
 	if !a.ResultID.IsZero() {
-		id = a.ResultID.String()
+		resultID = a.ResultID.String()
 	}
 
 	return json.Marshal(struct {
-		Result   string     `json:"result"`
-		ResultID string     `json:"id"`
-		Evidence []Evidence `json:"evidence,omitempty"`
+		ClassID     string     `json:"class_id,omitempty"`
+		AssertionID string     `json:"assertion_id,omitempty"`
+		Result      string     `json:"result"`
+		ResultID    string     `json:"id"`
+		Evidence    []Evidence `json:"evidence,omitempty"`
 	}{
-		Result:   result,
-		ResultID: id,
-		Evidence: a.Evidence,
+		ClassID:     a.ClassID,
+		AssertionID: a.AssertionID,
+		Result:      result,
+		ResultID:    resultID,
+		Evidence:    a.Evidence,
 	})
 }
 
