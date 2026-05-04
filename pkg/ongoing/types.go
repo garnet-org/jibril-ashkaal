@@ -3638,6 +3638,29 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 	})
 }
 
+func (a *Assertion) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*a = Assertion{}
+		return nil
+	}
+
+	type assertionAlias Assertion
+	var raw assertionAlias
+	if err := json.Unmarshal(data, &raw); err != nil {
+		return err
+	}
+
+	if !raw.ID.IsZero() && !raw.ClassID.IsZero() && raw.ID.ClassID() != raw.ClassID {
+		return fmt.Errorf(
+			"assertion id %q belongs to class %q, not %q",
+			raw.ID, raw.ID.ClassID(), raw.ClassID,
+		)
+	}
+
+	*a = Assertion(raw)
+	return nil
+}
+
 // Behavior Profile Event.
 
 type Profile struct {
