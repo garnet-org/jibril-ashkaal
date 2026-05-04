@@ -3384,12 +3384,196 @@ func (r Result) Number() int {
 	return int(r)
 }
 
+type AssertionClassID uint64
+
+const (
+	AssertionClassNone AssertionClassID = iota
+	AssertionClassNetwork
+	AssertionClassNetworkEgressFlows
+)
+
+var assertionClassIDStrings = map[AssertionClassID]string{
+	AssertionClassNetwork:            "Network",
+	AssertionClassNetworkEgressFlows: "Network Egress Flows",
+}
+
+func (k AssertionClassID) IsZero() bool {
+	return k == AssertionClassNone
+}
+
+func (k AssertionClassID) String() string {
+	if k.IsZero() {
+		return ""
+	}
+
+	if s, ok := assertionClassIDStrings[k]; ok {
+		return s
+	}
+
+	return ""
+}
+
+func (k AssertionClassID) MarshalJSON() ([]byte, error) {
+	if k.IsZero() {
+		return json.Marshal("")
+	}
+	s, ok := assertionClassIDStrings[k]
+	if !ok {
+		return nil, fmt.Errorf("invalid assertion class id: %d", uint64(k))
+	}
+	return json.Marshal(s)
+}
+
+func (k *AssertionClassID) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*k = AssertionClassNone
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			*k = AssertionClassNone
+			return nil
+		}
+		for id, name := range assertionClassIDStrings {
+			if name == s {
+				*k = id
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid assertion class id: %s", s)
+	}
+
+	var n uint64
+	if err := json.Unmarshal(data, &n); err == nil {
+		if n == 0 {
+			*k = AssertionClassNone
+			return nil
+		}
+		candidate := AssertionClassID(n)
+		if _, ok := assertionClassIDStrings[candidate]; !ok {
+			return fmt.Errorf("invalid assertion class id: %d", n)
+		}
+		*k = candidate
+		return nil
+	}
+
+	return fmt.Errorf("invalid assertion class id payload: %s", string(data))
+}
+
+// AssertionID identifies a specific assertion within a class. Each ID is
+// declared in a const block placed adjacent to its owning class.
+
+type AssertionID uint64
+
+const (
+	AssertionIDNone AssertionID = iota
+
+	// Generic assertion ID for bad network activity.
+	AssertionIDNetwork
+
+	// Assertion ID for bad network egress domain.
+	AssertionIDNetworkBadEgressDomain
+)
+
+type assertionIDInfo struct {
+	name  string
+	class AssertionClassID
+}
+
+// assertionIDInfos is the canonical registry of valid AssertionID values.
+// Membership in this map gates both the numeric and string UnmarshalJSON paths.
+var assertionIDInfos = map[AssertionID]assertionIDInfo{
+	// Network Assertions.
+	AssertionIDNetwork:                {"no_bad_network_activity", AssertionClassNetwork},
+	AssertionIDNetworkBadEgressDomain: {"no_bad_egress_domain", AssertionClassNetworkEgressFlows},
+}
+
+func (id AssertionID) IsZero() bool {
+	return id == AssertionIDNone
+}
+
+// ClassID returns the AssertionClassID that owns this AssertionID.
+func (id AssertionID) ClassID() AssertionClassID {
+	if id.IsZero() {
+		return AssertionClassNone
+	}
+	if info, ok := assertionIDInfos[id]; ok {
+		return info.class
+	}
+	return AssertionClassNone
+}
+
+func (id AssertionID) String() string {
+	if id.IsZero() {
+		return ""
+	}
+	if info, ok := assertionIDInfos[id]; ok {
+		return info.name
+	}
+	return ""
+}
+
+func (id AssertionID) MarshalJSON() ([]byte, error) {
+	if id.IsZero() {
+		return json.Marshal("")
+	}
+	info, ok := assertionIDInfos[id]
+	if !ok {
+		return nil, fmt.Errorf("invalid assertion id: %d", uint64(id))
+	}
+	return json.Marshal(info.name)
+}
+
+func (id *AssertionID) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*id = AssertionIDNone
+		return nil
+	}
+
+	var s string
+	if err := json.Unmarshal(data, &s); err == nil {
+		s = strings.TrimSpace(s)
+		if s == "" {
+			*id = AssertionIDNone
+			return nil
+		}
+		for v, info := range assertionIDInfos {
+			if info.name == s {
+				*id = v
+				return nil
+			}
+		}
+		return fmt.Errorf("invalid assertion id: %s", s)
+	}
+
+	var n uint64
+	if err := json.Unmarshal(data, &n); err == nil {
+		if n == 0 {
+			*id = AssertionIDNone
+			return nil
+		}
+		candidate := AssertionID(n)
+		if _, ok := assertionIDInfos[candidate]; !ok {
+			return fmt.Errorf("invalid assertion id: %d", n)
+		}
+		*id = candidate
+		return nil
+	}
+
+	return fmt.Errorf("invalid assertion id payload: %s", string(data))
+}
+
 // Assertion: A list of evidence that supports the assertion.
 
 type Assertion struct {
-	Result   Result     `json:"result"`   // Result of the assertion.
-	ResultID ResultID   `json:"id"`       // Result ID.
-	Evidence []Evidence `json:"evidence"` // Detections supporting the result.
+	ClassID  AssertionClassID `json:"class_id"`     // Class ID of assertion.
+	ID       AssertionID      `json:"assertion_id"` // Assertion ID.
+	Result   Result           `json:"result"`       // Result of the assertion.
+	ResultID ResultID         `json:"id"`           // Result ID.
+	Evidence []Evidence       `json:"evidence"`     // Detections supporting the result.
 }
 
 func (a Assertion) Clone() Assertion {
@@ -3398,6 +3582,8 @@ func (a Assertion) Clone() Assertion {
 		evidence[i] = e.Clone()
 	}
 	return Assertion{
+		ClassID:  a.ClassID,
+		ID:       a.ID,
 		Result:   a.Result,
 		ResultID: a.ResultID,
 		Evidence: evidence,
@@ -3405,7 +3591,9 @@ func (a Assertion) Clone() Assertion {
 }
 
 func (a Assertion) IsZero() bool {
-	return a.Result.IsZero() &&
+	return a.ClassID.IsZero() &&
+		a.ID.IsZero() &&
+		a.Result.IsZero() &&
 		a.ResultID.IsZero() &&
 		len(a.Evidence) == 0
 }
@@ -3415,23 +3603,37 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
+	classID := AssertionClassNone.String()
+	if !a.ClassID.IsZero() {
+		classID = a.ClassID.String()
+	}
+
+	id := AssertionIDNone.String()
+	if !a.ID.IsZero() {
+		id = a.ID.String()
+	}
+
 	result := ResultGood.String()
 	if !a.Result.IsZero() {
 		result = a.Result.String()
 	}
 
-	id := ResultNoBadEgressDomain.String()
+	resultID := ResultNoBadEgressDomain.String()
 	if !a.ResultID.IsZero() {
-		id = a.ResultID.String()
+		resultID = a.ResultID.String()
 	}
 
 	return json.Marshal(struct {
+		ClassID  string     `json:"class_id,omitempty"`
+		ID       string     `json:"assertion_id,omitempty"`
 		Result   string     `json:"result"`
 		ResultID string     `json:"id"`
 		Evidence []Evidence `json:"evidence,omitempty"`
 	}{
+		ClassID:  classID,
+		ID:       id,
 		Result:   result,
-		ResultID: id,
+		ResultID: resultID,
 		Evidence: a.Evidence,
 	})
 }
