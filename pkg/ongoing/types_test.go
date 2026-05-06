@@ -879,3 +879,101 @@ func TestAssertion_MarshalJSON_RoundTrip(t *testing.T) {
 		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
 	}
 }
+
+func TestProcessTree_PID(t *testing.T) {
+	assert.True(t, ProcessTree{}.IsZero())
+	assert.False(t, ProcessTree{PID: 1234}.IsZero())
+
+	pt := ProcessTree{PID: 42, Process: "bash", Executable: "/bin/bash"}
+
+	b, err := json.Marshal(pt)
+	assert.NoError(t, err)
+	assert.Contains(t, string(b), `"pid":42`)
+
+	var got ProcessTree
+	err = json.Unmarshal(b, &got)
+	assert.NoError(t, err)
+	assert.Equal(t, uint32(42), got.PID)
+	assert.Equal(t, "bash", got.Process)
+
+	// Zero PID must be omitted from output.
+	b, err = json.Marshal(ProcessTree{Process: "sh", Executable: "/bin/sh"})
+	assert.NoError(t, err)
+	assert.NotContains(t, string(b), `"pid"`)
+}
+
+func TestDigestedDetection_IsZero(t *testing.T) {
+	assert.True(t, DigestedDetection{}.IsZero())
+	assert.False(t, DigestedDetection{AssertionID: "no_bad_egress_domain"}.IsZero())
+	assert.False(t, DigestedDetection{Result: ResultGood}.IsZero())
+}
+
+func TestDigestedDetection_MarshalJSON(t *testing.T) {
+	b, err := json.Marshal(DigestedDetection{})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
+
+	dd := DigestedDetection{
+		AssertionID: "no_bad_egress_domain",
+		Result:      ResultGood,
+	}
+	b, err = json.Marshal(dd)
+	assert.NoError(t, err)
+	assert.Contains(t, string(b), `"assertion_id":"no_bad_egress_domain"`)
+	assert.Contains(t, string(b), `"result":"pass"`)
+	assert.NotContains(t, string(b), `"metadata"`)
+	assert.NotContains(t, string(b), `"score"`)
+}
+
+func TestDigestedDetection_RoundTrip(t *testing.T) {
+	orig := DigestedDetection{
+		AssertionID: "no_bad_egress_domain",
+		Result:      ResultGood,
+		Score:       Score{Source: "garnet", Severity: 50, SeverityLevel: "medium", Confidence: 0.9},
+		ProcTrees:   []ProcessTree{{PID: 100, Process: "curl", Executable: "/usr/bin/curl"}},
+	}
+
+	b, err := json.Marshal(orig)
+	assert.NoError(t, err)
+
+	var got DigestedDetection
+	err = json.Unmarshal(b, &got)
+	assert.NoError(t, err)
+	assert.Equal(t, orig.AssertionID, got.AssertionID)
+	assert.Equal(t, orig.Result, got.Result)
+	assert.Equal(t, orig.Score.Severity, got.Score.Severity)
+	assert.Equal(t, uint32(100), got.ProcTrees[0].PID)
+	assert.Equal(t, "curl", got.ProcTrees[0].Process)
+}
+
+func TestProfileDetection_IsZero(t *testing.T) {
+	assert.True(t, ProfileDetection{}.IsZero())
+	assert.False(t, ProfileDetection{ClassID: "Network Egress Flows"}.IsZero())
+	assert.False(t, ProfileDetection{
+		DigestedDetections: []DigestedDetection{{AssertionID: "x"}},
+	}.IsZero())
+}
+
+func TestProfileDetection_MarshalJSON(t *testing.T) {
+	b, err := json.Marshal(ProfileDetection{})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
+
+	pd := ProfileDetection{
+		ClassID: "Network Egress Flows",
+		DigestedDetections: []DigestedDetection{
+			{AssertionID: "no_bad_egress_domain", Result: ResultGood},
+		},
+	}
+	b, err = json.Marshal(pd)
+	assert.NoError(t, err)
+	assert.Contains(t, string(b), `"class_id":"Network Egress Flows"`)
+	assert.Contains(t, string(b), `"assertion_id":"no_bad_egress_domain"`)
+
+	var got ProfileDetection
+	err = json.Unmarshal(b, &got)
+	assert.NoError(t, err)
+	assert.Equal(t, pd.ClassID, got.ClassID)
+	assert.Equal(t, 1, len(got.DigestedDetections))
+	assert.Equal(t, "no_bad_egress_domain", got.DigestedDetections[0].AssertionID)
+}
