@@ -756,6 +756,26 @@ func TestProfile(t *testing.T) {
 				Local:   DirectionNetTelemetry{TotalDomains: 3, TotalConnections: 15},
 			},
 		},
+		ProfileDetections: []ProfileDetection{
+			{
+				ClassID: "Network Egress Flows",
+				DigestedDetections: []DigestedDetection{
+					{
+						AssertionID: "no_bad_egress_domain",
+						Result:      ResultGood,
+						Score: Score{
+							Source:        "rule:egress-profile",
+							Severity:      10,
+							SeverityLevel: "low",
+							Confidence:    0.9,
+						},
+						ProcTrees: []ProcessTree{
+							{PID: 1234, Process: "curl", Executable: "/usr/bin/curl"},
+						},
+					},
+				},
+			},
+		},
 	}
 
 	b, err := json.Marshal(want)
