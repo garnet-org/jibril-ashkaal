@@ -2624,6 +2624,7 @@ func (c *Container) UnmarshalJSON(data []byte) error {
 // ProcessTree.
 
 type ProcessTree struct {
+	PID        uint32   `json:"pid"` // Process ID.
 	Process    string   `json:"process"`
 	Executable string   `json:"executable"`
 	Arguments  string   `json:"arguments"`
@@ -2633,6 +2634,7 @@ type ProcessTree struct {
 
 func (pt ProcessTree) Clone() ProcessTree {
 	return ProcessTree{
+		PID:        pt.PID,
 		Process:    pt.Process,
 		Executable: pt.Executable,
 		Arguments:  pt.Arguments,
@@ -2642,9 +2644,11 @@ func (pt ProcessTree) Clone() ProcessTree {
 }
 
 func (pt ProcessTree) IsZero() bool {
-	return pt.Process == "" &&
+	return pt.PID == 0 &&
+		pt.Process == "" &&
 		pt.Executable == "" &&
 		pt.Arguments == "" &&
+		pt.GitHubStep == "" &&
 		len(pt.Ancestry) == 0
 }
 
@@ -2653,7 +2657,8 @@ func (pt ProcessTree) MarshalJSON() ([]byte, error) {
 		return []byte("null"), nil
 	}
 
-	return json.Marshal(struct {
+	created := struct {
+		PID        *uint32  `json:"pid,omitempty"`
 		Process    string   `json:"process,omitempty"`
 		Executable string   `json:"executable,omitempty"`
 		Arguments  string   `json:"arguments,omitempty"`
@@ -2665,7 +2670,14 @@ func (pt ProcessTree) MarshalJSON() ([]byte, error) {
 		Arguments:  pt.Arguments,
 		GitHubStep: pt.GitHubStep,
 		Ancestry:   pt.Ancestry,
-	})
+	}
+
+	if pt.PID != 0 {
+		pid := pt.PID
+		created.PID = &pid
+	}
+
+	return json.Marshal(created)
 }
 
 func (pt ProcessTree) String() string {
@@ -3446,13 +3458,149 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 	})
 }
 
+type DigestedDetection struct {
+	AssertionID string        `json:"assertion_id"` // Assertion ID that equals the 'assertion_id' field of the Assertion struct.
+	Metadata    Metadata      `json:"metadata"`     // Metadata associated with the detection.
+	Score       Score         `json:"score"`        // Score associated with the detection.
+	Result      Result        `json:"result"`       // Result of the detection.
+	ProcTrees   []ProcessTree `json:"proc_trees"`   // Process trees associated with the detection.
+}
+
+func (dd DigestedDetection) Clone() DigestedDetection {
+	procTrees := make([]ProcessTree, len(dd.ProcTrees))
+	for i, tree := range dd.ProcTrees {
+		procTrees[i] = tree.Clone()
+	}
+	return DigestedDetection{
+		AssertionID: dd.AssertionID,
+		Result:      dd.Result,
+		Metadata:    dd.Metadata.Clone(),
+		Score:       dd.Score.Clone(),
+		ProcTrees:   procTrees,
+	}
+}
+
+func (dd DigestedDetection) IsZero() bool {
+	return dd.AssertionID == "" &&
+		dd.Result.IsZero() &&
+		dd.Metadata.IsZero() &&
+		dd.Score.IsZero() &&
+		len(dd.ProcTrees) == 0
+}
+
+func (dd DigestedDetection) MarshalJSON() ([]byte, error) {
+	if dd.IsZero() {
+		return []byte("null"), nil
+	}
+
+	created := struct {
+		AssertionID string        `json:"assertion_id,omitempty"`
+		Result      string        `json:"result,omitempty"`
+		Metadata    *Metadata     `json:"metadata,omitempty"`
+		Score       *Score        `json:"score,omitempty"`
+		ProcTrees   []ProcessTree `json:"proc_trees,omitempty"`
+	}{
+		AssertionID: dd.AssertionID,
+		Result:      dd.Result.String(),
+	}
+
+	if !dd.Metadata.IsZero() {
+		created.Metadata = &dd.Metadata
+	}
+	if !dd.Score.IsZero() {
+		created.Score = &dd.Score
+	}
+	if len(dd.ProcTrees) > 0 {
+		created.ProcTrees = dd.ProcTrees
+	}
+
+	return json.Marshal(created)
+}
+
+func (dd *DigestedDetection) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*dd = DigestedDetection{}
+		return nil
+	}
+
+	type digestedDetectionAlias DigestedDetection
+
+	var decoded digestedDetectionAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*dd = DigestedDetection(decoded)
+
+	return nil
+}
+
+type ProfileDetection struct {
+	ClassID            string              `json:"class_id"`            // The class ID of the detection, which corresponds to the class ID of an assertion.
+	DigestedDetections []DigestedDetection `json:"digested_detections"` // The digested detections that are part of this class.
+}
+
+func (d ProfileDetection) Clone() ProfileDetection {
+	detections := make([]DigestedDetection, len(d.DigestedDetections))
+	for i, dd := range d.DigestedDetections {
+		detections[i] = dd.Clone()
+	}
+	return ProfileDetection{
+		ClassID:            d.ClassID,
+		DigestedDetections: detections,
+	}
+}
+
+func (d ProfileDetection) IsZero() bool {
+	return d.ClassID == "" &&
+		len(d.DigestedDetections) == 0
+}
+
+func (d ProfileDetection) MarshalJSON() ([]byte, error) {
+	if d.IsZero() {
+		return []byte("null"), nil
+	}
+
+	created := struct {
+		ClassID            string              `json:"class_id,omitempty"`
+		DigestedDetections []DigestedDetection `json:"digested_detections,omitempty"`
+	}{
+		ClassID: d.ClassID,
+	}
+
+	if len(d.DigestedDetections) > 0 {
+		created.DigestedDetections = d.DigestedDetections
+	}
+
+	return json.Marshal(created)
+}
+
+func (d *ProfileDetection) UnmarshalJSON(data []byte) error {
+	if string(data) == "null" {
+		*d = ProfileDetection{}
+		return nil
+	}
+
+	type profileDetectionAlias ProfileDetection
+
+	var decoded profileDetectionAlias
+	if err := json.Unmarshal(data, &decoded); err != nil {
+		return err
+	}
+
+	*d = ProfileDetection(decoded)
+
+	return nil
+}
+
 // Behavior Profile Event.
 
 type Profile struct {
 	Base
-	Network    NetProfile  `json:"network"`
-	Telemetry  Telemetry   `json:"telemetry"`
-	Assertions []Assertion `json:"assertions"`
+	Network           NetProfile         `json:"network"`
+	ProfileDetections []ProfileDetection `json:"profile_detections"`
+	Telemetry         Telemetry          `json:"telemetry"`
+	Assertions        []Assertion        `json:"assertions"`
 }
 
 func (p Profile) Clone() Profile {
@@ -3460,11 +3608,18 @@ func (p Profile) Clone() Profile {
 	for i, a := range p.Assertions {
 		assertions[i] = a.Clone()
 	}
+
+	detections := make([]ProfileDetection, len(p.ProfileDetections))
+	for i, d := range p.ProfileDetections {
+		detections[i] = d.Clone()
+	}
+
 	return Profile{
-		Base:       p.Base.Clone(),
-		Network:    p.Network.Clone(),
-		Telemetry:  p.Telemetry.Clone(),
-		Assertions: assertions,
+		Base:              p.Base.Clone(),
+		Network:           p.Network.Clone(),
+		Telemetry:         p.Telemetry.Clone(),
+		Assertions:        assertions,
+		ProfileDetections: detections,
 	}
 }
 
@@ -3472,7 +3627,8 @@ func (p Profile) IsZero() bool {
 	return p.Base.IsZero() &&
 		p.Network.IsZero() &&
 		p.Telemetry.IsZero() &&
-		len(p.Assertions) == 0
+		len(p.Assertions) == 0 &&
+		len(p.ProfileDetections) == 0
 }
 
 func (p Profile) MarshalJSON() ([]byte, error) {
@@ -3481,17 +3637,18 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 	}
 
 	created := struct {
-		UUID       *string     `json:"uuid,omitempty"`
-		Timestamp  *time.Time  `json:"timestamp,omitempty"`
-		Note       *string     `json:"note,omitempty"`
-		Metadata   *Metadata   `json:"metadata,omitempty"`
-		Attenuator *Attenuator `json:"attenuator,omitempty"`
-		Score      *Score      `json:"score,omitempty"`
-		Background *Background `json:"background,omitempty"`
-		Scenarios  *Scenarios  `json:"scenarios,omitempty"`
-		Network    *NetProfile `json:"network,omitempty"`
-		Telemetry  *Telemetry  `json:"telemetry,omitempty"`
-		Assertions []Assertion `json:"assertions,omitempty"`
+		UUID              *string            `json:"uuid,omitempty"`
+		Timestamp         *time.Time         `json:"timestamp,omitempty"`
+		Note              *string            `json:"note,omitempty"`
+		Metadata          *Metadata          `json:"metadata,omitempty"`
+		Attenuator        *Attenuator        `json:"attenuator,omitempty"`
+		Score             *Score             `json:"score,omitempty"`
+		Background        *Background        `json:"background,omitempty"`
+		Scenarios         *Scenarios         `json:"scenarios,omitempty"`
+		Network           *NetProfile        `json:"network,omitempty"`
+		Telemetry         *Telemetry         `json:"telemetry,omitempty"`
+		Assertions        []Assertion        `json:"assertions,omitempty"`
+		ProfileDetections []ProfileDetection `json:"profile_detections,omitempty"`
 	}{}
 
 	if !p.Base.IsZero() {
@@ -3527,6 +3684,9 @@ func (p Profile) MarshalJSON() ([]byte, error) {
 	if len(p.Assertions) > 0 {
 		created.Assertions = p.Assertions
 	}
+	if len(p.ProfileDetections) > 0 {
+		created.ProfileDetections = p.ProfileDetections
+	}
 
 	return json.Marshal(created)
 }
@@ -3539,10 +3699,11 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 
 	var decoded struct {
 		baseAlias
-		Timestamp  legacyTime  `json:"timestamp"`
-		Network    NetProfile  `json:"network"`
-		Telemetry  Telemetry   `json:"telemetry"`
-		Assertions []Assertion `json:"assertions"`
+		Timestamp         legacyTime         `json:"timestamp"`
+		Network           NetProfile         `json:"network"`
+		ProfileDetections []ProfileDetection `json:"profile_detections"`
+		Telemetry         Telemetry          `json:"telemetry"`
+		Assertions        []Assertion        `json:"assertions"`
 	}
 
 	if err := json.Unmarshal(data, &decoded); err != nil {
@@ -3550,10 +3711,11 @@ func (p *Profile) UnmarshalJSON(data []byte) error {
 	}
 
 	*p = Profile{
-		Base:       Base(decoded.baseAlias),
-		Network:    decoded.Network,
-		Telemetry:  decoded.Telemetry,
-		Assertions: decoded.Assertions,
+		Base:              Base(decoded.baseAlias),
+		Network:           decoded.Network,
+		Telemetry:         decoded.Telemetry,
+		Assertions:        decoded.Assertions,
+		ProfileDetections: decoded.ProfileDetections,
 	}
 	p.Timestamp = decoded.Timestamp.Time
 
