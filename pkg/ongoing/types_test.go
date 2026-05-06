@@ -813,3 +813,69 @@ func TestBackground_UnmarshalJSON_Compatibility(t *testing.T) {
 	assert.NotContains(t, string(b), `"file_list"`)
 	assert.NotContains(t, string(b), `"flow_list"`)
 }
+
+func TestAssertion_IsZero(t *testing.T) {
+	assert.True(t, Assertion{}.IsZero())
+	assert.False(t, Assertion{ClassID: "Network"}.IsZero())
+	assert.False(t, Assertion{AssertionID: "no_bad_egress_domain"}.IsZero())
+	assert.False(t, Assertion{Result: ResultGood}.IsZero())
+	assert.False(t, Assertion{ResultID: ResultNoBadEgressDomain}.IsZero())
+	assert.False(t, Assertion{Evidence: []Evidence{{}}}.IsZero())
+}
+
+func TestAssertion_Clone(t *testing.T) {
+	orig := Assertion{
+		ClassID:     "Network Egress Flows",
+		AssertionID: "no_bad_egress_domain",
+		Result:      ResultGood,
+		ResultID:    ResultNoBadEgressDomain,
+	}
+	c := orig.Clone()
+	assert.Equal(t, orig, c)
+
+	c.ClassID = "other"
+	assert.Equal(t, "Network Egress Flows", orig.ClassID)
+
+	c.AssertionID = "other"
+	assert.Equal(t, "no_bad_egress_domain", orig.AssertionID)
+}
+
+func TestAssertion_MarshalJSON(t *testing.T) {
+	b, err := json.Marshal(Assertion{})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
+
+	a := Assertion{
+		ClassID:     "Network Egress Flows",
+		AssertionID: "no_bad_egress_domain",
+		Result:      ResultGood,
+		ResultID:    ResultNoBadEgressDomain,
+	}
+	b, err = json.Marshal(a)
+	assert.NoError(t, err)
+	assert.Contains(t, string(b), `"class_id":"Network Egress Flows"`)
+	assert.Contains(t, string(b), `"assertion_id":"no_bad_egress_domain"`)
+	assert.Contains(t, string(b), `"result":"pass"`)
+	assert.Contains(t, string(b), `"id":"no_bad_egress_domain"`)
+}
+
+func TestAssertion_MarshalJSON_RoundTrip(t *testing.T) {
+	orig := Assertion{
+		ClassID:     "Network Egress Flows",
+		AssertionID: "no_bad_egress_domain",
+		Result:      ResultGood,
+		ResultID:    ResultNoBadEgressDomain,
+		Evidence:    []Evidence{{EventName: "test-detection"}},
+	}
+
+	b, err := json.Marshal(orig)
+	assert.NoError(t, err)
+
+	var got Assertion
+	err = json.Unmarshal(b, &got)
+	assert.NoError(t, err)
+
+	if diff := cmp.Diff(orig, got); diff != "" {
+		t.Errorf("round-trip mismatch (-want +got):\n%s", diff)
+	}
+}
