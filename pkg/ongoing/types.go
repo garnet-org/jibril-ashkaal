@@ -3438,10 +3438,7 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 		result = a.Result.String()
 	}
 
-	resultID := ResultNoBadEgressDomain.String()
-	if !a.ResultID.IsZero() {
-		resultID = a.ResultID.String()
-	}
+	resultID := a.ResultID.String()
 
 	return json.Marshal(struct {
 		ClassID     string     `json:"class_id,omitempty"`
