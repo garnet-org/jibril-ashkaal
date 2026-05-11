@@ -997,3 +997,86 @@ func TestProfileDetection_MarshalJSON(t *testing.T) {
 	assert.Equal(t, 1, len(got.DigestedDetections))
 	assert.Equal(t, "no_bad_egress_domain", got.DigestedDetections[0].AssertionID)
 }
+
+func TestBase_IsZero_NullMarshal(t *testing.T) {
+	assert.True(t, Base{}.IsZero())
+	assert.False(t, Base{UUID: "b-001"}.IsZero())
+
+	b, err := json.Marshal(Base{})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
+}
+
+func TestBase_Clone(t *testing.T) {
+	orig := Base{
+		UUID: "b-001",
+		Score: Score{
+			Source:  "garnet",
+			Reasons: []string{"reason_one"},
+		},
+		Background: Background{
+			Ancestry: []Process{{Pid: 10, Comm: "init"}},
+		},
+	}
+	c := orig.Clone()
+	assert.Equal(t, orig.UUID, c.UUID)
+
+	c.UUID = "changed"
+	assert.Equal(t, "b-001", orig.UUID)
+
+	c.Score.Reasons[0] = "mutated"
+	assert.Equal(t, "reason_one", orig.Score.Reasons[0])
+
+	c.Background.Ancestry[0].Comm = "mutated"
+	assert.Equal(t, "init", orig.Background.Ancestry[0].Comm)
+}
+
+func TestBackground_Clone(t *testing.T) {
+	orig := Background{
+		Files:    []File{{UUID: "f-001", Path: "/a"}},
+		Flows:    []Flow{{UUID: "fl-001", Proto: "tcp"}},
+		Ancestry: []Process{{Pid: 10, Comm: "init"}},
+	}
+	c := orig.Clone()
+
+	c.Files[0].Path = "/b"
+	assert.Equal(t, "/a", orig.Files[0].Path)
+
+	c.Flows[0].Proto = "udp"
+	assert.Equal(t, "tcp", orig.Flows[0].Proto)
+
+	c.Ancestry[0].Comm = "mutated"
+	assert.Equal(t, "init", orig.Ancestry[0].Comm)
+}
+
+func TestProfile_IsZero(t *testing.T) {
+	assert.False(t, Profile{Base: Base{UUID: "p-001"}}.IsZero())
+	assert.False(t, Profile{Assertions: []Assertion{{ClassID: "x"}}}.IsZero())
+	assert.False(t, Profile{
+		ProfileDetections: []ProfileDetection{{ClassID: "x"}},
+	}.IsZero())
+}
+
+func TestProfile_Clone(t *testing.T) {
+	orig := Profile{
+		Base: Base{UUID: "p-001"},
+		Assertions: []Assertion{
+			{ClassID: "Network", AssertionID: "no_bad_egress_domain"},
+		},
+		ProfileDetections: []ProfileDetection{
+			{ClassID: "Egress", DigestedDetections: []DigestedDetection{
+				{AssertionID: "no_bad_egress_domain"},
+			}},
+		},
+	}
+	c := orig.Clone()
+
+	c.UUID = "changed"
+	assert.Equal(t, "p-001", orig.UUID)
+
+	c.Assertions[0].ClassID = "Other"
+	assert.Equal(t, "Network", orig.Assertions[0].ClassID)
+
+	c.ProfileDetections[0].ClassID = "Other"
+	assert.Equal(t, "Egress", orig.ProfileDetections[0].ClassID)
+}
