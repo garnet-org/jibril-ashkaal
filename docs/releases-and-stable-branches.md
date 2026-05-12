@@ -10,7 +10,8 @@ Major, minor, and patch releases follow the version format `X.Y.Z`:
 
 | LTS Branch | Latest Stable Release |
 |------------|-----------------------|
-| v0.3-stable | v0.3.0                |
+| v1.3-stable | v1.3.1                |
+| v1.2-stable | v1.2.1                |
 
 ## Branching strategy
 
@@ -80,4 +81,4 @@ The process of backporting a fix involves the following steps:
 
 - Mark the commits as backports and reference the upstream commits in the commit message of the backports.
 
-- Once the backport PR is created, it should be reviewed and approved by the team before being merged into the stable branch.
+- Once the backport PR is created, if approved by the team it can be merged into the stable branch.
