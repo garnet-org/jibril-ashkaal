@@ -81,8 +81,8 @@ The process of backporting a fix involves the following steps:
 
 - Mark the commits as backports and reference the upstream commits in the commit message of the backports.
 
-- Once the backport PR is created, if approved by the team it can be merged into the stable branch.
+- Once the backport PR is created and approved by the team, it can be merged into the stable branch.
 
-## References:
+## References
 
 [Cilium Backporting process](https://github.com/cilium/cilium/blob/main/Documentation/contributing/release/backports.rst)

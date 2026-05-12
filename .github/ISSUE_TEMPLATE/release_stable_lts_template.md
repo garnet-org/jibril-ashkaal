@@ -20,7 +20,7 @@ Example: `v0.3.1` stable release from `v0.3-stable` branch.
 
 > Patch releases (`X.Y.Z` where `Z > 0`) do **not** require a new stable branch.
 
-> All backport fixes to stable branches must follow the criteria in [releases-and-stable-branches doc](docs/releases-and-stable-branches.md).
+> All backport fixes to stable branches must follow the criteria in [releases-and-stable-branches doc](../blob/main/docs/releases-and-stable-branches.md).
 
 ### Major or minor release checklist
 
@@ -50,16 +50,15 @@ git checkout -b $STABLE_BRANCH $RELEASE
 git push origin $STABLE_BRANCH
 ```
 
-- [ ] Update the _Versions and Stable branches_ list in [Releases and Stable Branches doc](docs/releases-and-stable-branches.md) on `main`: add the new `vX.Y-stable` branch with `vX.Y.0` as its latest stable release, and remove unused stable branches.
+- [ ] Update the _Versions and Stable branches_ list in [Releases and Stable Branches doc](../blob/main/docs/releases-and-stable-branches.md) on `main`: add the new `vX.Y-stable` branch with `vX.Y.0` as its latest stable release, and remove unused stable branches.
 
 - [ ] Verify the new release tag and stable branch are visible and properly tracked in the repository.
 
 ### Patch release checklist
 
+- [ ] Add `vX.Y-stable` to the _Versions and Stable branches_ list in [Releases and Stable Branches doc](../blob/main/docs/releases-and-stable-branches.md) in main branch. Remove from the documentation unused stable branches. This may already have been performed if the stable branch was created at the time of the release.
 
-- [ ] Add `vX.Y-stable` to the _Versions and Stable branches_ list in [Releases and Stable Branches doc](docs/releases-and-stable-branches.md) in main branch. Remove from the documentation unused stable branches. This may already have been performed if the stable branch was created at the time of the release.
-
-- [ ] Backport the necessary fixes, and update the documentation to reference the stable release tag `vX.Y.Z` under the corresponding stable branch `vX.Y-stable` in the _Versions and Stable branches_ list in [Releases and Stable Branches doc](docs/releases-and-stable-branches.md).
+- [ ] Backport the necessary fixes, and update the documentation to reference the stable release tag `vX.Y.Z` under the corresponding stable branch `vX.Y-stable` in the _Versions and Stable branches_ list in [Releases and Stable Branches doc](../blob/main/docs/releases-and-stable-branches.md).
 
 ```bash
 export STABLE_RELEASE=v1.1.1
@@ -85,4 +84,3 @@ git push origin $STABLE_RELEASE
 ```
 
 - [ ] Verify the new release tag and stable branch are visible and properly tracked in the repository.
-
