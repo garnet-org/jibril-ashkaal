@@ -2994,7 +2994,7 @@ func (int DirectionNetTelemetry) Clone() DirectionNetTelemetry {
 
 func (int DirectionNetTelemetry) IsZero() bool {
 	// Both values must be zero to be considered zero.
-	return false
+	return int.TotalDomains == 0 && int.TotalConnections == 0
 }
 
 func (int DirectionNetTelemetry) MarshalJSON() ([]byte, error) {

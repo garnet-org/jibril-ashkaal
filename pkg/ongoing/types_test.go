@@ -1049,12 +1049,27 @@ func TestBackground_Clone(t *testing.T) {
 	assert.Equal(t, "init", orig.Ancestry[0].Comm)
 }
 
-func TestProfile_IsZero(t *testing.T) {
+func TestProfile_IsZero_NullMarshal(t *testing.T) {
+	assert.True(t, Profile{}.IsZero())
 	assert.False(t, Profile{Base: Base{UUID: "p-001"}}.IsZero())
 	assert.False(t, Profile{Assertions: []Assertion{{ClassID: "x"}}}.IsZero())
 	assert.False(t, Profile{
 		ProfileDetections: []ProfileDetection{{ClassID: "x"}},
 	}.IsZero())
+
+	b, err := json.Marshal(Profile{})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
+}
+
+func TestDirectionNetTelemetry_IsZero(t *testing.T) {
+	assert.True(t, DirectionNetTelemetry{}.IsZero())
+	assert.False(t, DirectionNetTelemetry{TotalDomains: 1}.IsZero())
+	assert.False(t, DirectionNetTelemetry{TotalConnections: 1}.IsZero())
+
+	b, err := json.Marshal(DirectionNetTelemetry{})
+	assert.NoError(t, err)
+	assert.Equal(t, "null", string(b))
 }
 
 func TestProfile_Clone(t *testing.T) {
