@@ -839,6 +839,7 @@ func TestAssertion_IsZero(t *testing.T) {
 	assert.False(t, Assertion{ClassID: "Network"}.IsZero())
 	assert.False(t, Assertion{AssertionID: "no_bad_egress_domain"}.IsZero())
 	assert.False(t, Assertion{Result: ResultGood}.IsZero())
+	assert.False(t, Assertion{Description: "asserts no bad egress"}.IsZero())
 	assert.False(t, Assertion{ResultID: ResultNoBadEgressDomain}.IsZero())
 	assert.False(t, Assertion{Evidence: []Evidence{{}}}.IsZero())
 }
@@ -848,6 +849,7 @@ func TestAssertion_Clone(t *testing.T) {
 		ClassID:     "Network Egress Flows",
 		AssertionID: "no_bad_egress_domain",
 		Result:      ResultGood,
+		Description: "asserts no bad egress domain was contacted",
 		ResultID:    ResultNoBadEgressDomain,
 	}
 	c := orig.Clone()
@@ -858,6 +860,9 @@ func TestAssertion_Clone(t *testing.T) {
 
 	c.AssertionID = "other"
 	assert.Equal(t, "no_bad_egress_domain", orig.AssertionID)
+
+	c.Description = "other"
+	assert.Equal(t, "asserts no bad egress domain was contacted", orig.Description)
 }
 
 func TestAssertion_MarshalJSON(t *testing.T) {
@@ -869,6 +874,7 @@ func TestAssertion_MarshalJSON(t *testing.T) {
 		ClassID:     "Network Egress Flows",
 		AssertionID: "no_bad_egress_domain",
 		Result:      ResultGood,
+		Description: "asserts no bad egress domain was contacted",
 		ResultID:    ResultNoBadEgressDomain,
 	}
 	b, err = json.Marshal(a)
@@ -876,7 +882,18 @@ func TestAssertion_MarshalJSON(t *testing.T) {
 	assert.Contains(t, string(b), `"class_id":"Network Egress Flows"`)
 	assert.Contains(t, string(b), `"assertion_id":"no_bad_egress_domain"`)
 	assert.Contains(t, string(b), `"result":"pass"`)
+	assert.Contains(t, string(b), `"description":"asserts no bad egress domain was contacted"`)
 	assert.Contains(t, string(b), `"id":"no_bad_egress_domain"`)
+
+	// Description is optional and must be omitted when empty.
+	b, err = json.Marshal(Assertion{
+		ClassID:     "Network Egress Flows",
+		AssertionID: "no_bad_egress_domain",
+		Result:      ResultGood,
+		ResultID:    ResultNoBadEgressDomain,
+	})
+	assert.NoError(t, err)
+	assert.NotContains(t, string(b), `"description"`)
 }
 
 func TestAssertion_MarshalJSON_RoundTrip(t *testing.T) {
@@ -884,6 +901,7 @@ func TestAssertion_MarshalJSON_RoundTrip(t *testing.T) {
 		ClassID:     "Network Egress Flows",
 		AssertionID: "no_bad_egress_domain",
 		Result:      ResultGood,
+		Description: "asserts no bad egress domain was contacted",
 		ResultID:    ResultNoBadEgressDomain,
 		Evidence:    []Evidence{{EventName: "test-detection"}},
 	}
