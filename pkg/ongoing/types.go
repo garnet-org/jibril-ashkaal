@@ -3402,6 +3402,7 @@ type Assertion struct {
 	ClassID     string     `json:"class_id,omitempty"`     // Class ID of assertion.
 	AssertionID string     `json:"assertion_id,omitempty"` // Assertion ID.
 	Result      Result     `json:"result"`                 // Result of the assertion.
+	Description string     `json:"description,omitempty"`  // Description of the assertion.
 	ResultID    ResultID   `json:"id"`                     // Result ID.
 	Evidence    []Evidence `json:"evidence"`               // Detections supporting the result.
 }
@@ -3415,6 +3416,7 @@ func (a Assertion) Clone() Assertion {
 		ClassID:     a.ClassID,
 		AssertionID: a.AssertionID,
 		Result:      a.Result,
+		Description: a.Description,
 		ResultID:    a.ResultID,
 		Evidence:    evidence,
 	}
@@ -3424,6 +3426,7 @@ func (a Assertion) IsZero() bool {
 	return a.ClassID == "" &&
 		a.AssertionID == "" &&
 		a.Result.IsZero() &&
+		a.Description == "" &&
 		a.ResultID.IsZero() &&
 		len(a.Evidence) == 0
 }
@@ -3444,12 +3447,14 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 		ClassID     string     `json:"class_id,omitempty"`
 		AssertionID string     `json:"assertion_id,omitempty"`
 		Result      string     `json:"result"`
+		Description string     `json:"description,omitempty"`
 		ResultID    string     `json:"id"`
 		Evidence    []Evidence `json:"evidence,omitempty"`
 	}{
 		ClassID:     a.ClassID,
 		AssertionID: a.AssertionID,
 		Result:      result,
+		Description: a.Description,
 		ResultID:    resultID,
 		Evidence:    a.Evidence,
 	})
