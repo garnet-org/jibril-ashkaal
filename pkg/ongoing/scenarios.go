@@ -119,6 +119,7 @@ type ScenarioGitHub struct {
 	ActorID           string           `json:"actor_id"`
 	EventName         string           `json:"event_name"`
 	Job               string           `json:"job"`
+	JobIndex          *uint32          `json:"job_index,omitempty"`
 	Ref               string           `json:"ref"`
 	RefName           string           `json:"ref_name"`
 	RefProtected      string           `json:"ref_protected"`
@@ -148,6 +149,11 @@ func (s ScenarioGitHub) Type() string {
 }
 
 func (s ScenarioGitHub) Clone() ScenarioType {
+	var jobIndex *uint32
+	if s.JobIndex != nil {
+		v := *s.JobIndex
+		jobIndex = &v
+	}
 	return ScenarioGitHub{
 		ScenarioType:      ScenarioTypeGitHub,
 		Action:            s.Action,
@@ -156,6 +162,7 @@ func (s ScenarioGitHub) Clone() ScenarioType {
 		ActorID:           s.ActorID,
 		EventName:         s.EventName,
 		Job:               s.Job,
+		JobIndex:          jobIndex,
 		Ref:               s.Ref,
 		RefName:           s.RefName,
 		RefProtected:      s.RefProtected,
@@ -188,6 +195,7 @@ func (s ScenarioGitHub) IsZero() bool {
 		s.ActorID == "" &&
 		s.EventName == "" &&
 		s.Job == "" &&
+		s.JobIndex == nil &&
 		s.Ref == "" &&
 		s.RefName == "" &&
 		s.RefProtected == "" &&
@@ -225,6 +233,7 @@ func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
 		ActorID           string           `json:"actor_id"`
 		EventName         string           `json:"event_name"`
 		Job               string           `json:"job"`
+		JobIndex          *uint32          `json:"job_index,omitempty"`
 		Ref               string           `json:"ref"`
 		RefName           string           `json:"ref_name"`
 		RefProtected      string           `json:"ref_protected"`
@@ -255,6 +264,7 @@ func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
 		ActorID:           s.ActorID,
 		EventName:         s.EventName,
 		Job:               s.Job,
+		JobIndex:          s.JobIndex,
 		Ref:               s.Ref,
 		RefName:           s.RefName,
 		RefProtected:      s.RefProtected,
@@ -298,6 +308,9 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 
 	m["event_name"] = s.EventName
 	m["job"] = s.Job
+	if s.JobIndex != nil {
+		m["job_index"] = *s.JobIndex
+	}
 
 	m["ref"] = s.Ref
 	m["ref_name"] = s.RefName
