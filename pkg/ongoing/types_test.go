@@ -292,6 +292,7 @@ func TestProfile_UnmarshalJSON_LegacyNestedTimes(t *testing.T) {
 }
 
 func TestProfile(t *testing.T) {
+	jobIndex := uint32(0)
 	want := Profile{
 		Base: Base{
 			UUID:      "det-001",
@@ -562,6 +563,7 @@ func TestProfile(t *testing.T) {
 					ActorID:           "1001",
 					EventName:         "workflow_run",
 					Job:               "build",
+					JobIndex:          &jobIndex,
 					Ref:               "refs/heads/main",
 					RefName:           "main",
 					RefProtected:      "true",
