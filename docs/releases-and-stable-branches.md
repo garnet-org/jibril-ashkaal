@@ -10,8 +10,8 @@ Major, minor, and patch releases follow the version format `X.Y.Z`:
 
 | LTS Branch | Latest Stable Release |
 |------------|-----------------------|
-| v1.3-stable | v1.3.1                |
-| v1.2-stable | v1.2.1                |
+| v1.4-stable | v1.4.0                |
+| v1.3-stable | v1.3.2                |
 
 ## Branching strategy
 
