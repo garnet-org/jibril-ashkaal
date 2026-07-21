@@ -20,6 +20,28 @@ type ProcessRef struct {
 	Ancestry    []ProcessRef `json:"ancestry"`     // Flat ancestry chain.
 }
 
+// The string hash fields are derived from the kernel uint32 hashes, so the process
+// and exe hashes always share the registry key padding and can never diverge from
+// a caller-formatted string.
+//
+// The passed ancestry slice is taken by reference, not copied. Callers that need
+// an independent copy should Clone the result.
+
+func NewProcessRef(
+	processHash, exeHash uint32,
+	pid uint32, exe, args string,
+	ancestry []ProcessRef,
+) ProcessRef {
+	return ProcessRef{
+		ProcessHash: hashKey(processHash),
+		ExeHash:     hashKey(exeHash),
+		Pid:         pid,
+		Exe:         exe,
+		Args:        args,
+		Ancestry:    ancestry,
+	}
+}
+
 func (p ProcessRef) Clone() ProcessRef {
 	cloned := p
 	cloned.Ancestry = nil
@@ -88,6 +110,16 @@ func (r ProcessRegistry) IsZero() bool {
 func (r ProcessRegistry) Get(key string) (ProcessRef, bool) {
 	v, ok := r[key]
 	return v, ok
+}
+
+// The entry is keyed on its own process hash so the map key can never diverge
+// from the field. A ref without a hash has no key and is dropped.
+
+func (r ProcessRegistry) Add(ref ProcessRef) {
+	if ref.ProcessHash == "" {
+		return
+	}
+	r[ref.ProcessHash] = ref
 }
 
 func (r ProcessRegistry) MarshalJSON() ([]byte, error) {
