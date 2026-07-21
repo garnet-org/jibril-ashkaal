@@ -84,6 +84,62 @@ func TestProcessRefMarshalJSON(t *testing.T) {
 	}
 }
 
+func TestNewProcessRef(t *testing.T) {
+	ref := NewProcessRef(0x9af2c1, 0x12ab34, 42, "/usr/bin/curl", "--silent",
+		[]ProcessRef{{Exe: "/usr/bin/bash"}})
+
+	// Hashes go through hashKey, so they are padded to eight hex chars.
+	if ref.ProcessHash != "009af2c1" {
+		t.Fatalf("process hash = %q, want 009af2c1", ref.ProcessHash)
+	}
+	if ref.ExeHash != "0012ab34" {
+		t.Fatalf("exe hash = %q, want 0012ab34", ref.ExeHash)
+	}
+	if ref.Pid != 42 || ref.Exe != "/usr/bin/curl" || ref.Args != "--silent" {
+		t.Fatalf("scalar fields not copied through: %+v", ref)
+	}
+	if len(ref.Ancestry) != 1 || ref.Ancestry[0].Exe != "/usr/bin/bash" {
+		t.Fatalf("ancestry not copied through: %+v", ref.Ancestry)
+	}
+
+	// The field must equal the registry key hashKey produces for the same hash.
+	if ref.ProcessHash != hashKey(0x9af2c1) {
+		t.Fatalf("field %q diverges from key %q", ref.ProcessHash, hashKey(0x9af2c1))
+	}
+
+	// A zero process hash yields no key, matching the registry contract.
+	if got := NewProcessRef(0, 0, 0, "", "", nil); got.ProcessHash != "" {
+		t.Fatalf("zero hash = %q, want empty", got.ProcessHash)
+	}
+}
+
+func TestProcessRegistryAdd(t *testing.T) {
+	reg := ProcessRegistry{}
+
+	ref := NewProcessRef(0x9af2c1, 0, 1, "/usr/bin/curl", "", nil)
+	reg.Add(ref)
+
+	// The entry is keyed on its own hash field, not a caller-chosen key.
+	got, ok := reg.Get(ref.ProcessHash)
+	if !ok {
+		t.Fatalf("Add did not key on ProcessHash %q", ref.ProcessHash)
+	}
+	if got.Exe != "/usr/bin/curl" {
+		t.Fatalf("stored ref mismatch: %+v", got)
+	}
+	for k, v := range reg {
+		if k != v.ProcessHash {
+			t.Fatalf("key %q diverges from field %q", k, v.ProcessHash)
+		}
+	}
+
+	// A ref without a hash has no key and is dropped.
+	reg.Add(ProcessRef{Exe: "/no/hash"})
+	if len(reg) != 1 {
+		t.Fatalf("hashless ref was stored: len = %d", len(reg))
+	}
+}
+
 func TestProcessRegistry(t *testing.T) {
 	var empty ProcessRegistry
 	if !empty.IsZero() {
