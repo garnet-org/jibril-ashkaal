@@ -1,6 +1,9 @@
 package ongoing
 
-import "fmt"
+import (
+	"strconv"
+	"strings"
+)
 
 // Canonical keys for the process and target registries.
 //
@@ -17,7 +20,8 @@ func hashKey(h uint32) string {
 	if h == 0 {
 		return ""
 	}
-	return fmt.Sprintf("%08x", h)
+	hex := strconv.FormatUint(uint64(h), 16)
+	return strings.Repeat("0", 8-len(hex)) + hex
 }
 
 func targetEventKey(eventKind string, h uint32) string {
