@@ -14,7 +14,7 @@ func TestProcessRefIsZero(t *testing.T) {
 	}{
 		{"empty", ProcessRef{}, true},
 		{"hash only", ProcessRef{ProcessHash: "009af2c1"}, false},
-		{"pid only", ProcessRef{Pid: 42}, false},
+		{"pid only", ProcessRef{Pid: 42}, true},
 		{"args only", ProcessRef{Args: "--once"}, false},
 		{"ancestry only", ProcessRef{Ancestry: []ProcessRef{{Exe: "/bin/sh"}}}, false},
 	}
@@ -81,6 +81,20 @@ func TestProcessRefMarshalJSON(t *testing.T) {
 	if back.ProcessHash != ref.ProcessHash || len(back.Ancestry) != 1 ||
 		back.Ancestry[0].Exe != "/usr/bin/bash" {
 		t.Fatalf("round-trip mismatch: %+v", back)
+	}
+}
+
+func TestProcessRefMarshalPidZero(t *testing.T) {
+	// PID 0 could be interrupt context. A non-zero ref must still emit its pid,
+	// so the pid field carries no omitempty that would silently drop it.
+	ref := ProcessRef{ProcessHash: "009af2c1", Pid: 0}
+
+	got, err := json.Marshal(ref)
+	if err != nil {
+		t.Fatalf("marshal: %v", err)
+	}
+	if !strings.Contains(string(got), `"pid":0`) {
+		t.Fatalf("marshal = %s, want pid:0 present", got)
 	}
 }
 

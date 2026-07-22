@@ -57,7 +57,6 @@ func (p ProcessRef) Clone() ProcessRef {
 func (p ProcessRef) IsZero() bool {
 	return p.ProcessHash == "" &&
 		p.ExeHash == "" &&
-		p.Pid == 0 &&
 		p.Exe == "" &&
 		p.Args == "" &&
 		len(p.Ancestry) == 0
@@ -71,7 +70,7 @@ func (p ProcessRef) MarshalJSON() ([]byte, error) {
 	return json.Marshal(struct {
 		ProcessHash string       `json:"process_hash,omitempty"`
 		ExeHash     string       `json:"exe_hash,omitempty"`
-		Pid         uint32       `json:"pid,omitempty"`
+		Pid         uint32       `json:"pid"`
 		Exe         string       `json:"exe,omitempty"`
 		Args        string       `json:"args,omitempty"`
 		Ancestry    []ProcessRef `json:"ancestry,omitempty"`
