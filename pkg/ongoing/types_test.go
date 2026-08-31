@@ -579,6 +579,7 @@ func TestProfile(t *testing.T) {
 					RunnerOS:          "linux",
 					ServerURL:         "https://github.com",
 					SHA:               "abcdef1234567890",
+					HeadSHA:           "fedcba0987654321",
 					TriggeringActor:   "octocat",
 					Workflow:          "build.yml",
 					WorkflowRef:       "refs/heads/main",

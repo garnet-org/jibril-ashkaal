@@ -114,3 +114,112 @@ func TestScenarioGitHub_JobIndex_MarshalJSONMap(t *testing.T) {
 	assert.True(t, ok)
 	assert.Equal(t, uint32(0), v)
 }
+
+func TestScenarioGitHub_HeadSHA_IsZero(t *testing.T) {
+	assert.True(t, ScenarioGitHub{}.IsZero())
+	assert.True(t, ScenarioGitHub{HeadSHA: ""}.IsZero())
+
+	assert.False(t, ScenarioGitHub{HeadSHA: "abcdef1234567890"}.IsZero())
+}
+
+func TestScenarioGitHub_HeadSHA_MarshalJSON(t *testing.T) {
+	tests := []struct {
+		name        string
+		headSHA     string
+		wantPresent bool
+		wantValue   string
+	}{
+		{name: "unset omits key", headSHA: "", wantPresent: false},
+		{
+			name:        "pull request head emitted",
+			headSHA:     "abcdef1234567890",
+			wantPresent: true,
+			wantValue:   `"head_sha":"abcdef1234567890"`,
+		},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			// Keep another field set so IsZero is false and the
+			// scenario marshals to an object rather than null.
+			s := ScenarioGitHub{Job: "build", HeadSHA: tc.headSHA}
+			b, err := json.Marshal(s)
+			assert.NoError(t, err)
+
+			if tc.wantPresent {
+				assert.Contains(t, string(b), tc.wantValue)
+			} else {
+				assert.NotContains(t, string(b), "head_sha")
+			}
+		})
+	}
+}
+
+func TestScenarioGitHub_HeadSHA_RoundTrip(t *testing.T) {
+	tests := []struct {
+		name    string
+		sha     string
+		headSHA string
+	}{
+		{name: "unset", sha: "mergecommit000000", headSHA: ""},
+		// On a pull request the merge commit and the head differ.
+		{name: "differs from sha", sha: "mergecommit000000", headSHA: "abcdef1234567890"},
+		{name: "same as sha", sha: "abcdef1234567890", headSHA: "abcdef1234567890"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			want := ScenarioGitHub{
+				ScenarioType: ScenarioTypeGitHub,
+				Job:          "build",
+				SHA:          tc.sha,
+				HeadSHA:      tc.headSHA,
+			}
+			b, err := json.Marshal(want)
+			assert.NoError(t, err)
+
+			var got ScenarioGitHub
+			err = json.Unmarshal(b, &got)
+			assert.NoError(t, err)
+
+			if diff := cmp.Diff(want, got); diff != "" {
+				t.Errorf("scenario mismatch (-want +got):\n%s", diff)
+			}
+		})
+	}
+}
+
+func TestScenarioGitHub_HeadSHA_Clone(t *testing.T) {
+	orig := ScenarioGitHub{
+		Job:     "build",
+		SHA:     "mergecommit000000",
+		HeadSHA: "abcdef1234567890",
+	}
+	clone, ok := orig.Clone().(ScenarioGitHub)
+	assert.True(t, ok)
+	assert.Equal(t, "abcdef1234567890", clone.HeadSHA)
+
+	// The head sha must not be confused with the merge commit sha.
+	assert.Equal(t, "mergecommit000000", clone.SHA)
+
+	// An unset HeadSHA clones to empty.
+	emptyClone, ok := ScenarioGitHub{Job: "build"}.Clone().(ScenarioGitHub)
+	assert.True(t, ok)
+	assert.Equal(t, "", emptyClone.HeadSHA)
+}
+
+func TestScenarioGitHub_HeadSHA_MarshalJSONMap(t *testing.T) {
+	m, err := ScenarioGitHub{Job: "build"}.MarshalJSONMap()
+	assert.NoError(t, err)
+	_, ok := m["head_sha"]
+	assert.False(t, ok)
+
+	m, err = ScenarioGitHub{
+		Job:     "build",
+		HeadSHA: "abcdef1234567890",
+	}.MarshalJSONMap()
+	assert.NoError(t, err)
+	v, ok := m["head_sha"].(string)
+	assert.True(t, ok)
+	assert.Equal(t, "abcdef1234567890", v)
+}
