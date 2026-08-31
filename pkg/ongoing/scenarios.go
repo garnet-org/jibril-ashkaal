@@ -135,6 +135,7 @@ type ScenarioGitHub struct {
 	RunnerOS          string           `json:"runner_os"`
 	ServerURL         string           `json:"server_url"`
 	SHA               string           `json:"sha"`
+	HeadSHA           string           `json:"head_sha,omitempty"`
 	TriggeringActor   string           `json:"triggering_actor"`
 	Workflow          string           `json:"workflow"`
 	WorkflowRef       string           `json:"workflow_ref"`
@@ -178,6 +179,7 @@ func (s ScenarioGitHub) Clone() ScenarioType {
 		RunnerOS:          s.RunnerOS,
 		ServerURL:         s.ServerURL,
 		SHA:               s.SHA,
+		HeadSHA:           s.HeadSHA,
 		TriggeringActor:   s.TriggeringActor,
 		Workflow:          s.Workflow,
 		WorkflowRef:       s.WorkflowRef,
@@ -211,6 +213,7 @@ func (s ScenarioGitHub) IsZero() bool {
 		s.RunnerOS == "" &&
 		s.ServerURL == "" &&
 		s.SHA == "" &&
+		s.HeadSHA == "" &&
 		s.TriggeringActor == "" &&
 		s.Workflow == "" &&
 		s.WorkflowRef == "" &&
@@ -249,6 +252,7 @@ func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
 		RunnerOS          string           `json:"runner_os"`
 		ServerURL         string           `json:"server_url"`
 		SHA               string           `json:"sha"`
+		HeadSHA           string           `json:"head_sha,omitempty"`
 		TriggeringActor   string           `json:"triggering_actor"`
 		Workflow          string           `json:"workflow"`
 		WorkflowRef       string           `json:"workflow_ref"`
@@ -280,6 +284,7 @@ func (s ScenarioGitHub) MarshalJSON() ([]byte, error) {
 		RunnerOS:          s.RunnerOS,
 		ServerURL:         s.ServerURL,
 		SHA:               s.SHA,
+		HeadSHA:           s.HeadSHA,
 		TriggeringActor:   s.TriggeringActor,
 		Workflow:          s.Workflow,
 		WorkflowRef:       s.WorkflowRef,
@@ -331,6 +336,9 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 
 	m["server_url"] = s.ServerURL
 	m["sha"] = s.SHA
+	if s.HeadSHA != "" {
+		m["head_sha"] = s.HeadSHA
+	}
 	m["triggering_actor"] = s.TriggeringActor
 
 	m["workflow"] = s.Workflow
