@@ -3212,6 +3212,50 @@ func (rid ResultID) StringSlice() []string {
 	return parts
 }
 
+func (rid ResultID) MarshalText() ([]byte, error) {
+	return []byte(rid.String()), nil
+}
+
+func (rid *ResultID) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s == "" {
+		*rid = ResultIDNone
+		return nil
+	}
+
+	parts := strings.Split(s, "|")
+	var result ResultID
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+
+		matched := false
+		for id, idName := range resultIDStrings {
+			if id == ResultIDNone {
+				continue
+			}
+			if idName == name {
+				result |= id
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			return fmt.Errorf("invalid result id: %s", name)
+		}
+	}
+
+	*rid = result
+	return nil
+}
+
+func (rid ResultID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(rid.String())
+}
+
 func (rid *ResultID) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		*rid = ResultIDNone
@@ -3220,38 +3264,7 @@ func (rid *ResultID) UnmarshalJSON(data []byte) error {
 
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
-		if s == "" {
-			*rid = ResultIDNone
-			return nil
-		}
-
-		parts := strings.Split(s, "|")
-		var result ResultID
-		for _, part := range parts {
-			name := strings.TrimSpace(part)
-			if name == "" {
-				continue
-			}
-
-			matched := false
-			for id, idName := range resultIDStrings {
-				if id == ResultIDNone {
-					continue
-				}
-				if idName == name {
-					result |= id
-					matched = true
-					break
-				}
-			}
-
-			if !matched {
-				return fmt.Errorf("invalid result id: %s", name)
-			}
-		}
-
-		*rid = result
-		return nil
+		return rid.UnmarshalText([]byte(s))
 	}
 
 	var n uint64
@@ -3337,6 +3350,46 @@ func (r Result) StringSlice() []string {
 	return parts
 }
 
+func (r Result) MarshalText() ([]byte, error) {
+	return []byte(r.String()), nil
+}
+
+func (r *Result) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s == "" {
+		*r = ResultNone
+		return nil
+	}
+
+	parts := strings.Split(s, "|")
+	var result Result
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+
+		matched := false
+		for id, resultName := range resultStrings {
+			if id == ResultNone {
+				continue
+			}
+			if resultName == name {
+				result |= id
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			return fmt.Errorf("invalid result: %s", name)
+		}
+	}
+
+	*r = result
+	return nil
+}
+
 func (r Result) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.String())
 }
@@ -3349,38 +3402,7 @@ func (r *Result) UnmarshalJSON(data []byte) error {
 
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
-		if s == "" {
-			*r = ResultNone
-			return nil
-		}
-
-		parts := strings.Split(s, "|")
-		var result Result
-		for _, part := range parts {
-			name := strings.TrimSpace(part)
-			if name == "" {
-				continue
-			}
-
-			matched := false
-			for id, resultName := range resultStrings {
-				if id == ResultNone {
-					continue
-				}
-				if resultName == name {
-					result |= id
-					matched = true
-					break
-				}
-			}
-
-			if !matched {
-				return fmt.Errorf("invalid result: %s", name)
-			}
-		}
-
-		*r = result
-		return nil
+		return r.UnmarshalText([]byte(s))
 	}
 
 	var n uint
