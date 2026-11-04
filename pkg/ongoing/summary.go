@@ -12,12 +12,12 @@ import "encoding/json"
 // ancestry (which would be recursive).
 
 type ProcessRef struct {
-	ProcessHash string       `json:"process_hash"` // Instance identity (== map key).
-	ExeHash     string       `json:"exe_hash"`     // Executable identity.
-	Pid         uint32       `json:"pid"`          // Process ID.
-	Exe         string       `json:"exe"`          // Executable path.
-	Args        string       `json:"args"`         // Arguments.
-	Ancestry    []ProcessRef `json:"ancestry"`     // Flat ancestry chain.
+	ProcessHash string       `json:"process_hash,omitempty" desc:"Process instance hash identifier."` // Instance identity (== map key).
+	ExeHash     string       `json:"exe_hash,omitempty" desc:"Executable path hash identifier."`      // Executable identity.
+	Pid         uint32       `json:"pid" desc:"Process ID."`                                          // Process ID.
+	Exe         string       `json:"exe,omitempty" desc:"Executable path."`                           // Executable path.
+	Args        string       `json:"args,omitempty" desc:"Command-line arguments."`                   // Arguments.
+	Ancestry    []ProcessRef `json:"ancestry,omitempty" desc:"Flat process ancestry chain."`          // Flat ancestry chain.
 }
 
 // The string hash fields are derived from the kernel uint32 hashes, so the process
