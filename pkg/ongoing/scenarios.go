@@ -26,9 +26,9 @@ func (s ScenarioTypeName) Num() int {
 }
 
 type Scenarios struct {
-	GitHub ScenarioGitHub `json:"github"`
-	HostOS ScenarioHostOS `json:"hostos"`
-	K8S    ScenarioK8S    `json:"k8s"`
+	GitHub ScenarioGitHub `json:"github,omitzero" desc:"GitHub Actions workflow scenario metadata."`
+	HostOS ScenarioHostOS `json:"hostos,omitzero" desc:"Host operating system scenario metadata."`
+	K8S    ScenarioK8S    `json:"k8s,omitzero" desc:"Kubernetes pod and cluster scenario metadata."`
 }
 
 func (s Scenarios) Clone() Scenarios {
@@ -112,37 +112,37 @@ type ScenarioType interface {
 // Scenario GitHub.
 
 type ScenarioGitHub struct {
-	ScenarioType      ScenarioTypeName `json:"scenario_type"`
-	ID                string           `json:"id"`
-	Action            string           `json:"action"`
-	Actor             string           `json:"actor"`
-	ActorID           string           `json:"actor_id"`
-	EventName         string           `json:"event_name"`
-	Job               string           `json:"job"`
-	JobIndex          *uint32          `json:"job_index,omitempty"`
-	Ref               string           `json:"ref"`
-	RefName           string           `json:"ref_name"`
-	RefProtected      string           `json:"ref_protected"`
-	RefType           string           `json:"ref_type"`
-	Repository        string           `json:"repository"`
-	RepositoryID      string           `json:"repository_id"`
-	RepositoryOwner   string           `json:"repository_owner"`
-	RepositoryOwnerID string           `json:"repository_owner_id"`
-	RunAttempt        string           `json:"run_attempt"`
-	RunID             string           `json:"run_id"`
-	RunNumber         string           `json:"run_number"`
-	RunnerArch        string           `json:"runner_arch"`
-	RunnerOS          string           `json:"runner_os"`
-	ServerURL         string           `json:"server_url"`
-	SHA               string           `json:"sha"`
-	HeadSHA           string           `json:"head_sha,omitempty"`
-	TriggeringActor   string           `json:"triggering_actor"`
-	Workflow          string           `json:"workflow"`
-	WorkflowRef       string           `json:"workflow_ref"`
-	WorkflowSHA       string           `json:"workflow_sha"`
-	Workspace         string           `json:"workspace"`
-	CreatedAt         time.Time        `json:"created_at"`
-	UpdateAt          time.Time        `json:"updated_at"`
+	ScenarioType      ScenarioTypeName `json:"scenario_type" desc:"Scenario type identifier (github)."`
+	ID                string           `json:"id" desc:"GitHub scenario identifier."`
+	Action            string           `json:"action" desc:"Name of the currently running action or step."`
+	Actor             string           `json:"actor" desc:"GitHub username that initiated the workflow."`
+	ActorID           string           `json:"actor_id" desc:"GitHub account ID of the actor."`
+	EventName         string           `json:"event_name" desc:"Webhook event name that triggered the workflow."`
+	Job               string           `json:"job" desc:"Job identifier within the workflow."`
+	JobIndex          *uint32          `json:"job_index,omitempty" desc:"Zero-based matrix job index."`
+	Ref               string           `json:"ref" desc:"Full Git ref that triggered the workflow."`
+	RefName           string           `json:"ref_name" desc:"Short branch or tag name of the ref."`
+	RefProtected      string           `json:"ref_protected" desc:"Whether the ref is a protected branch."`
+	RefType           string           `json:"ref_type" desc:"Type of Git ref (branch or tag)."`
+	Repository        string           `json:"repository" desc:"Owner and repository name (owner/repo)."`
+	RepositoryID      string           `json:"repository_id" desc:"Unique ID of the GitHub repository."`
+	RepositoryOwner   string           `json:"repository_owner" desc:"Repository owner username or organization."`
+	RepositoryOwnerID string           `json:"repository_owner_id" desc:"Unique ID of the repository owner."`
+	RunAttempt        string           `json:"run_attempt" desc:"Attempt number of the workflow run."`
+	RunID             string           `json:"run_id" desc:"Unique ID of the workflow run."`
+	RunNumber         string           `json:"run_number" desc:"Run number for the workflow in the repository."`
+	RunnerArch        string           `json:"runner_arch" desc:"Architecture of the runner executing the job."`
+	RunnerOS          string           `json:"runner_os" desc:"Operating system of the runner executing the job."`
+	ServerURL         string           `json:"server_url" desc:"URL of the GitHub server."`
+	SHA               string           `json:"sha" desc:"Commit SHA that triggered the workflow."`
+	HeadSHA           string           `json:"head_sha,omitempty" desc:"Head commit SHA for pull request workflows."`
+	TriggeringActor   string           `json:"triggering_actor" desc:"Username of the user that initiated the workflow run."`
+	Workflow          string           `json:"workflow" desc:"Name of the workflow."`
+	WorkflowRef       string           `json:"workflow_ref" desc:"Ref path to the workflow file."`
+	WorkflowSHA       string           `json:"workflow_sha" desc:"Commit SHA of the workflow file."`
+	Workspace         string           `json:"workspace" desc:"Default working directory on the runner."`
+	CreatedAt         time.Time        `json:"created_at" desc:"Creation timestamp of the scenario."`
+	UpdateAt          time.Time        `json:"updated_at" desc:"Last update timestamp of the scenario."`
 }
 
 func (s ScenarioGitHub) Type() string {
@@ -355,12 +355,12 @@ func (s ScenarioGitHub) MarshalJSONMap() (map[string]any, error) {
 // Scenario HostOS.
 
 type ScenarioHostOS struct {
-	ScenarioType ScenarioTypeName `json:"scenario_type"`
-	MachineID    string           `json:"machine_id"`
-	Hostname     string           `json:"hostname"`
-	IP           string           `json:"ip"`
-	OS           string           `json:"os"`
-	Arch         string           `json:"arch"`
+	ScenarioType ScenarioTypeName `json:"scenario_type" desc:"Scenario type identifier (hostos)."`
+	MachineID    string           `json:"machine_id" desc:"Unique machine identifier of the host."`
+	Hostname     string           `json:"hostname" desc:"Hostname of the host."`
+	IP           string           `json:"ip" desc:"Primary IP address of the host."`
+	OS           string           `json:"os" desc:"Operating system name of the host."`
+	Arch         string           `json:"arch" desc:"CPU architecture of the host."`
 }
 
 func (s ScenarioHostOS) Type() string {
@@ -429,11 +429,11 @@ func (s ScenarioHostOS) MarshalJSONMap() (map[string]any, error) {
 // Scenario K8S.
 
 type ScenarioK8S struct {
-	ScenarioType ScenarioTypeName `json:"scenario_type"`
-	Cluster      string           `json:"cluster"`
-	Namespace    string           `json:"namespace"`
-	Pod          string           `json:"pod"`
-	Node         string           `json:"node"`
+	ScenarioType ScenarioTypeName `json:"scenario_type" desc:"Scenario type identifier (k8s)."`
+	Cluster      string           `json:"cluster" desc:"Kubernetes cluster name."`
+	Namespace    string           `json:"namespace" desc:"Kubernetes namespace of the pod."`
+	Pod          string           `json:"pod" desc:"Kubernetes pod name."`
+	Node         string           `json:"node" desc:"Kubernetes node name."`
 }
 
 func (s ScenarioK8S) Type() string {

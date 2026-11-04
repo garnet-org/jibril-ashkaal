@@ -10,14 +10,14 @@ import (
 // All detection events have these fields.
 
 type Base struct {
-	UUID       string     `json:"uuid"`       // The unique ID of the event.
-	Timestamp  time.Time  `json:"timestamp"`  // The timestamp of the event.
-	Note       string     `json:"note"`       // A note about the event.
-	Metadata   Metadata   `json:"metadata"`   // The event metadata.
-	Attenuator Attenuator `json:"attenuator"` // The attenuator of the event.
-	Score      Score      `json:"score"`      // Event Security Risk Score.
-	Background Background `json:"background"` // The event context.
-	Scenarios  Scenarios  `json:"scenarios"`  // GitHub, Kubernetes, Host, etc.
+	UUID       string     `json:"uuid,omitempty" desc:"The unique ID of the event."`             // The unique ID of the event.
+	Timestamp  time.Time  `json:"timestamp,omitzero" desc:"The timestamp of the event."`         // The timestamp of the event.
+	Note       string     `json:"note,omitempty" desc:"A note about the event."`                 // A note about the event.
+	Metadata   Metadata   `json:"metadata,omitzero" desc:"The event metadata."`                  // The event metadata.
+	Attenuator Attenuator `json:"attenuator,omitzero" desc:"The attenuator of the event."`       // The attenuator of the event.
+	Score      Score      `json:"score,omitzero" desc:"Event security risk score."`              // Event Security Risk Score.
+	Background Background `json:"background,omitzero" desc:"The event context."`                 // The event context.
+	Scenarios  Scenarios  `json:"scenarios,omitzero" desc:"Environment scenarios of the event."` // GitHub, Kubernetes, Host, etc.
 }
 
 var legacyTimeLayouts = [...]string{
@@ -210,16 +210,16 @@ func (b *Base) UnmarshalJSON(data []byte) error {
 // Detection Event Metadata.
 
 type Metadata struct {
-	Kind          string `json:"kind"`          // Detection event class name.
-	Name          string `json:"name"`          // Detection recipe name.
-	Format        string `json:"format"`        // Detection event format.
-	Version       string `json:"version"`       // Detection event format version.
-	Description   string `json:"description"`   // Detection event description.
-	Tactic        string `json:"tactic"`        // Detection event MITRE tactic.
-	Technique     string `json:"technique"`     // Detection event MITRE technique.
-	SubTechnique  string `json:"subtechnique"`  // Detection event MITRE subtechnique.
-	Importance    string `json:"importance"`    // Detection event importance.
-	Documentation string `json:"documentation"` // Detection event documentation.
+	Kind          string `json:"kind" desc:"Detection event class name."`                           // Detection event class name.
+	Name          string `json:"name" desc:"Detection recipe name."`                                // Detection recipe name.
+	Format        string `json:"format" desc:"Detection event format."`                             // Detection event format.
+	Version       string `json:"version" desc:"Detection event format version."`                    // Detection event format version.
+	Description   string `json:"description,omitempty" desc:"Detection event description."`         // Detection event description.
+	Tactic        string `json:"tactic,omitempty" desc:"Detection event MITRE tactic."`             // Detection event MITRE tactic.
+	Technique     string `json:"technique,omitempty" desc:"Detection event MITRE technique."`       // Detection event MITRE technique.
+	SubTechnique  string `json:"subtechnique,omitempty" desc:"Detection event MITRE subtechnique."` // Detection event MITRE subtechnique.
+	Importance    string `json:"importance,omitempty" desc:"Detection event importance."`           // Detection event importance.
+	Documentation string `json:"documentation,omitempty" desc:"Detection event documentation."`     // Detection event documentation.
 }
 
 func (m Metadata) Clone() Metadata {
@@ -283,12 +283,12 @@ func (m Metadata) MarshalJSON() ([]byte, error) {
 // Security Risk Score.
 
 type Score struct {
-	Source        string   `json:"source"`         // Source of the score.
-	Severity      int      `json:"severity"`       // Severity number of the detection (0-100).
-	SeverityLevel string   `json:"severity_level"` // Severity level of the detection (none, low, medium, high, critical).
-	Confidence    float64  `json:"confidence"`     // Confidence percentage of the detection (0.0-1.0).
-	RiskScore     float64  `json:"risk_score"`     // Calculated and rounded up risk score of the detection (0.0-100.0).
-	Reasons       []string `json:"reasons"`        // Reasons to explain to users why this score.
+	Source        string   `json:"source" desc:"Source of the score."`                                                             // Source of the score.
+	Severity      int      `json:"severity" desc:"Severity number of the detection (0-100)."`                                      // Severity number of the detection (0-100).
+	SeverityLevel string   `json:"severity_level" desc:"Severity level of the detection (none, low, medium, high, critical)."`     // Severity level of the detection (none, low, medium, high, critical).
+	Confidence    float64  `json:"confidence" desc:"Confidence percentage of the detection (0.0-1.0)."`                            // Confidence percentage of the detection (0.0-1.0).
+	RiskScore     float64  `json:"risk_score,omitempty" desc:"Calculated and rounded up risk score of the detection (0.0-100.0)."` // Calculated and rounded up risk score of the detection (0.0-100.0).
+	Reasons       []string `json:"reasons,omitempty" desc:"Reasons explaining why this score was assigned."`                       // Reasons to explain to users why this score.
 }
 
 func (s Score) Clone() Score {
@@ -336,14 +336,14 @@ func (s Score) MarshalJSON() ([]byte, error) {
 // Attenuator.
 
 type Attenuator struct {
-	AttenuatedBy     string  `json:"attenuated_by"`      // The model that attenuated the detection.
-	Interpretation   string  `json:"interpretation"`     // The interpretation of the attenuation.
-	Thinking         string  `json:"thinking"`           // The thinking of the attenuation.
-	IsFalsePositive  bool    `json:"is_false_positive"`  // Whether the detection is a false positive.
-	NewSeverity      int     `json:"new_severity"`       // The new detection severity after attenuation (0-100).
-	NewSeverityLevel string  `json:"new_severity_level"` // The new detection severity level after attenuation (low, medium, high, critical).
-	NewConfidence    float64 `json:"new_confidence"`     // The new detection confidence after attenuation (0.0-1.0).
-	NewRiskScore     float64 `json:"new_risk_score"`     // The new detection risk score after attenuation (0.0-100.0).
+	AttenuatedBy     string  `json:"attenuated_by" desc:"The model that attenuated the detection."`                                               // The model that attenuated the detection.
+	Interpretation   string  `json:"interpretation" desc:"The interpretation of the attenuation."`                                                // The interpretation of the attenuation.
+	Thinking         string  `json:"thinking,omitempty" desc:"The thinking process of the attenuation."`                                          // The thinking of the attenuation.
+	IsFalsePositive  bool    `json:"is_false_positive" desc:"Whether the detection is a false positive."`                                         // Whether the detection is a false positive.
+	NewSeverity      int     `json:"new_severity" desc:"The new detection severity after attenuation (0-100)."`                                   // The new detection severity after attenuation (0-100).
+	NewSeverityLevel string  `json:"new_severity_level" desc:"The new detection severity level after attenuation (low, medium, high, critical)."` // The new detection severity level after attenuation (low, medium, high, critical).
+	NewConfidence    float64 `json:"new_confidence" desc:"The new detection confidence after attenuation (0.0-1.0)."`                             // The new detection confidence after attenuation (0.0-1.0).
+	NewRiskScore     float64 `json:"new_risk_score" desc:"The new detection risk score after attenuation (0.0-100.0)."`                           // The new detection risk score after attenuation (0.0-100.0).
 }
 
 func (a Attenuator) Clone() Attenuator {
@@ -399,12 +399,12 @@ func (a Attenuator) MarshalJSON() ([]byte, error) {
 // Context.
 
 type Background struct {
-	Containers  Containers    `json:"containers"`
-	Files       []File        `json:"file_list"`
-	Flows       []Flow        `json:"flow_list"`
-	Ancestry    []Process     `json:"ancestry"`
-	LegacyFiles FileAggregate `json:"files"` // TODO: Remove this field.
-	LegacyFlows FlowAggregate `json:"flows"` // TODO: Remove this field.
+	Containers  Containers    `json:"containers,omitzero" desc:"Containers and namespaces associated with the event."`
+	Files       []File        `json:"file_list,omitempty" desc:"Files associated with the event."`
+	Flows       []Flow        `json:"flow_list,omitempty" desc:"Network flows associated with the event."`
+	Ancestry    []Process     `json:"ancestry,omitempty" desc:"Process ancestry chain associated with the event."`
+	LegacyFiles FileAggregate `json:"files,omitzero" desc:"Legacy aggregated file tree associated with the event."`     // TODO: Remove this field.
+	LegacyFlows FlowAggregate `json:"flows,omitzero" desc:"Legacy aggregated network flows associated with the event."` // TODO: Remove this field.
 }
 
 func (b Background) Clone() Background {
@@ -550,8 +550,8 @@ func (b Background) MarshalJSON() ([]byte, error) {
 
 type FileAccess struct {
 	Base
-	File    File    `json:"file"`    // File accessed by the process.
-	Process Process `json:"process"` // Process that accessed the file.
+	File    File    `json:"file,omitzero" desc:"File accessed by the process."`      // File accessed by the process.
+	Process Process `json:"process,omitzero" desc:"Process that accessed the file."` // Process that accessed the file.
 }
 
 func (f FileAccess) Clone() FileAccess {
@@ -650,8 +650,8 @@ func (f *FileAccess) UnmarshalJSON(data []byte) error {
 
 type Execution struct {
 	Base
-	File    File    `json:"file"`
-	Process Process `json:"process"`
+	File    File    `json:"file,omitzero" desc:"Executed file."`
+	Process Process `json:"process,omitzero" desc:"Executed process."`
 }
 
 func (e Execution) Clone() Execution {
@@ -750,8 +750,8 @@ func (e *Execution) UnmarshalJSON(data []byte) error {
 
 type NetworkPeer struct {
 	Base
-	Process Process `json:"process"` // Process triggering the detection with the flow.
-	Flow    Flow    `json:"flow"`    // Network flow triggering the detection.
+	Process Process `json:"process,omitzero" desc:"Process triggering the detection with the flow."` // Process triggering the detection with the flow.
+	Flow    Flow    `json:"flow,omitzero" desc:"Network flow triggering the detection."`             // Network flow triggering the detection.
 }
 
 func (n NetworkPeer) Clone() NetworkPeer {
@@ -850,8 +850,8 @@ func (n *NetworkPeer) UnmarshalJSON(data []byte) error {
 
 type NetworkFlow struct {
 	Base
-	Process Process `json:"process"`
-	Flow    Flow    `json:"flow"`
+	Process Process `json:"process,omitzero" desc:"Process associated with the network flow."`
+	Flow    Flow    `json:"flow,omitzero" desc:"Network flow."`
 }
 
 func (n NetworkFlow) Clone() NetworkFlow {
@@ -949,10 +949,10 @@ func (n *NetworkFlow) UnmarshalJSON(data []byte) error {
 
 type DropIP struct {
 	Base
-	IP      string   `json:"ip"`      // The IP that was dropped.
-	Names   []string `json:"names"`   // The names of the IP.
-	Process Process  `json:"process"` // Process that triggered the drop.
-	Flow    Flow     `json:"flow"`    // The flow that triggered the drop.
+	IP      string   `json:"ip,omitempty" desc:"The IP address that was dropped."`     // The IP that was dropped.
+	Names   []string `json:"names,omitempty" desc:"The domain names of the IP."`       // The names of the IP.
+	Process Process  `json:"process,omitzero" desc:"Process that triggered the drop."` // Process that triggered the drop.
+	Flow    Flow     `json:"flow,omitzero" desc:"The flow that triggered the drop."`   // The flow that triggered the drop.
 }
 
 func (d DropIP) Clone() DropIP {
@@ -1062,36 +1062,36 @@ func (d *DropIP) UnmarshalJSON(data []byte) error {
 // Process.
 
 type Process struct {
-	UUID       string     `json:"uuid"`        // Unique ID of the process.
-	Start      time.Time  `json:"start"`       // The start time of the process.
-	Exit       time.Time  `json:"exit"`        // The exit time of the process.
-	Code       int        `json:"retcode"`     // The return code of the process.
-	UID        uint       `json:"uid"`         // The user ID of the process.
-	Pid        int        `json:"pid"`         // The process ID.
-	Ppid       int        `json:"ppid"`        // The parent process ID.
-	Comm       string     `json:"comm"`        // The command name.
-	Cmd        string     `json:"cmd"`         // The command.
-	Exe        string     `json:"exe"`         // The executable name.
-	Args       string     `json:"args"`        // The arguments.
-	Envs       string     `json:"envs"`        // The environment variables.
-	Loader     string     `json:"loader"`      // The loader name.
-	PrevExe    string     `json:"prev_exe"`    // The previous executable name.
-	PrevArgs   string     `json:"prev_args"`   // The previous arguments.
-	PrevEnvs   string     `json:"prev_envs"`   // The previous environment variables.
-	PrevLoader string     `json:"prev_loader"` // The previous loader name.
-	Namespaces Namespaces `json:"namespaces"`  // The namespaces.
+	UUID       string     `json:"uuid" desc:"Unique ID of the process."`                           // Unique ID of the process.
+	Start      time.Time  `json:"start" desc:"The start time of the process."`                     // The start time of the process.
+	Exit       time.Time  `json:"exit" desc:"The exit time of the process."`                       // The exit time of the process.
+	Code       int        `json:"retcode" desc:"The return code of the process."`                  // The return code of the process.
+	UID        uint       `json:"uid" desc:"The user ID of the process."`                          // The user ID of the process.
+	Pid        int        `json:"pid" desc:"The process ID."`                                      // The process ID.
+	Ppid       int        `json:"ppid" desc:"The parent process ID."`                              // The parent process ID.
+	Comm       string     `json:"comm" desc:"The command name."`                                   // The command name.
+	Cmd        string     `json:"cmd" desc:"The command line."`                                    // The command.
+	Exe        string     `json:"exe" desc:"The executable path."`                                 // The executable name.
+	Args       string     `json:"args,omitempty" desc:"The command arguments."`                    // The arguments.
+	Envs       string     `json:"envs,omitempty" desc:"The environment variables."`                // The environment variables.
+	Loader     string     `json:"loader,omitempty" desc:"The dynamic loader path."`                // The loader name.
+	PrevExe    string     `json:"prev_exe,omitempty" desc:"The previous executable path."`         // The previous executable name.
+	PrevArgs   string     `json:"prev_args,omitempty" desc:"The previous command arguments."`      // The previous arguments.
+	PrevEnvs   string     `json:"prev_envs,omitempty" desc:"The previous environment variables."`  // The previous environment variables.
+	PrevLoader string     `json:"prev_loader,omitempty" desc:"The previous dynamic loader path."`  // The previous loader name.
+	Namespaces Namespaces `json:"namespaces,omitzero" desc:"The Linux namespaces of the process."` // The namespaces.
 	// Hashes for external indexing amongst other ongoing events.
-	ProcessHash    uint32 `json:"process_hash"`     // The hash of the process.
-	ParentHash     uint32 `json:"parent_hash"`      // The hash of the parent process.
-	CommHash       uint32 `json:"comm_hash"`        // The hash of the command.
-	ExeHash        uint32 `json:"exe_hash"`         // The hash of the executable.
-	ArgsHash       uint32 `json:"args_hash"`        // The hash of the arguments.
-	EnvsHash       uint32 `json:"envs_hash"`        // The hash of the environment variables.
-	LoaderHash     uint32 `json:"loader_hash"`      // The hash of the loader.
-	PrevExeHash    uint32 `json:"prev_exe_hash"`    // The hash of the previous executable.
-	PrevArgsHash   uint32 `json:"prev_args_hash"`   // The hash of the previous arguments.
-	PrevEnvsHash   uint32 `json:"prev_envs_hash"`   // The hash of the previous environment variables.
-	PrevLoaderHash uint32 `json:"prev_loader_hash"` // The hash of the previous loader.
+	ProcessHash    uint32 `json:"process_hash,omitempty" desc:"The hash of the process."`                          // The hash of the process.
+	ParentHash     uint32 `json:"parent_hash,omitempty" desc:"The hash of the parent process."`                    // The hash of the parent process.
+	CommHash       uint32 `json:"comm_hash,omitempty" desc:"The hash of the command."`                             // The hash of the command.
+	ExeHash        uint32 `json:"exe_hash,omitempty" desc:"The hash of the executable."`                           // The hash of the executable.
+	ArgsHash       uint32 `json:"args_hash,omitempty" desc:"The hash of the arguments."`                           // The hash of the arguments.
+	EnvsHash       uint32 `json:"envs_hash,omitempty" desc:"The hash of the environment variables."`               // The hash of the environment variables.
+	LoaderHash     uint32 `json:"loader_hash,omitempty" desc:"The hash of the loader."`                            // The hash of the loader.
+	PrevExeHash    uint32 `json:"prev_exe_hash,omitempty" desc:"The hash of the previous executable."`             // The hash of the previous executable.
+	PrevArgsHash   uint32 `json:"prev_args_hash,omitempty" desc:"The hash of the previous arguments."`             // The hash of the previous arguments.
+	PrevEnvsHash   uint32 `json:"prev_envs_hash,omitempty" desc:"The hash of the previous environment variables."` // The hash of the previous environment variables.
+	PrevLoaderHash uint32 `json:"prev_loader_hash,omitempty" desc:"The hash of the previous loader."`              // The hash of the previous loader.
 }
 
 func (p Process) Clone() Process {
@@ -1231,12 +1231,12 @@ func (p *Process) UnmarshalJSON(data []byte) error {
 // Namespaces.
 
 type Namespaces struct {
-	MNTNs    uint32 `json:"mnt_ns"`    // Mount namespace.
-	PIDNs    uint32 `json:"pid_ns"`    // PID namespace.
-	UTSNs    uint32 `json:"uts_ns"`    // UTS namespace.
-	IPCNs    uint32 `json:"ipc_ns"`    // IPC namespace.
-	NetNs    uint32 `json:"net_ns"`    // Network namespace.
-	CgroupNs uint32 `json:"cgroup_ns"` // Cgroup namespace.
+	MNTNs    uint32 `json:"mnt_ns,omitempty" desc:"Mount namespace inode ID."`     // Mount namespace.
+	PIDNs    uint32 `json:"pid_ns,omitempty" desc:"PID namespace inode ID."`       // PID namespace.
+	UTSNs    uint32 `json:"uts_ns,omitempty" desc:"UTS namespace inode ID."`       // UTS namespace.
+	IPCNs    uint32 `json:"ipc_ns,omitempty" desc:"IPC namespace inode ID."`       // IPC namespace.
+	NetNs    uint32 `json:"net_ns,omitempty" desc:"Network namespace inode ID."`   // Network namespace.
+	CgroupNs uint32 `json:"cgroup_ns,omitempty" desc:"Cgroup namespace inode ID."` // Cgroup namespace.
 }
 
 func (n Namespaces) IsZero() bool {
@@ -1273,19 +1273,19 @@ func (n Namespaces) MarshalJSON() ([]byte, error) {
 // File.
 
 type File struct {
-	UUID        string          `json:"uuid"`        // UUID of the file.
-	Path        string          `json:"path"`        // Absolute path to the file.
-	Dir         string          `json:"dir"`         // Directory containing the file.
-	Base        string          `json:"basename"`    // Base name of the file.
-	Type        string          `json:"type"`        // File type: regular, directory, symlink, socket, block, char, fifo.
-	Owner       FileOwner       `json:"owner"`       // File owner.
-	Actions     FileActions     `json:"actions"`     // Detailed actions performed on the file.
-	Permissions FilePermissions `json:"permissions"` // File permissions.
-	Metadata    FileMetadata    `json:"metadata"`    // File metadata.
+	UUID        string          `json:"uuid" desc:"UUID of the file."`                                                  // UUID of the file.
+	Path        string          `json:"path" desc:"Absolute path to the file."`                                         // Absolute path to the file.
+	Dir         string          `json:"dir" desc:"Directory containing the file."`                                      // Directory containing the file.
+	Base        string          `json:"basename" desc:"Base name of the file."`                                         // Base name of the file.
+	Type        string          `json:"type" desc:"File type: regular, directory, symlink, socket, block, char, fifo."` // File type: regular, directory, symlink, socket, block, char, fifo.
+	Owner       FileOwner       `json:"owner" desc:"File owner."`                                                       // File owner.
+	Actions     FileActions     `json:"actions,omitzero" desc:"Detailed actions performed on the file."`                // Detailed actions performed on the file.
+	Permissions FilePermissions `json:"permissions,omitzero" desc:"File permissions."`                                  // File permissions.
+	Metadata    FileMetadata    `json:"metadata,omitzero" desc:"File metadata."`                                        // File metadata.
 	// Hashes for external indexing amongst other ongoing events.
-	FileHash uint32 `json:"file_hash"` // The hash of the file.
-	DirHash  uint32 `json:"dir_hash"`  // The hash of the directory.
-	BaseHash uint32 `json:"base_hash"` // The hash of the base name.
+	FileHash uint32 `json:"file_hash,omitempty" desc:"The hash of the file."`      // The hash of the file.
+	DirHash  uint32 `json:"dir_hash,omitempty" desc:"The hash of the directory."`  // The hash of the directory.
+	BaseHash uint32 `json:"base_hash,omitempty" desc:"The hash of the base name."` // The hash of the base name.
 }
 
 func (f File) Clone() File {
@@ -1366,8 +1366,8 @@ func (f File) MarshalJSON() ([]byte, error) {
 // File Owner.
 
 type FileOwner struct {
-	UID uint32 `json:"uid"` // User ID of owner.
-	GID uint32 `json:"gid"` // Group ID of owner.
+	UID uint32 `json:"uid" desc:"User ID of the file owner."`  // User ID of owner.
+	GID uint32 `json:"gid" desc:"Group ID of the file owner."` // Group ID of owner.
 }
 
 func (f FileOwner) Clone() FileOwner {
@@ -1395,19 +1395,19 @@ func (f FileOwner) MarshalJSON() ([]byte, error) {
 // File Permissions.
 
 type FilePermissions struct {
-	Mode       string `json:"mode"`        // File mode as string (e.g., "rwxr-xr-x").
-	OwnerRead  bool   `json:"owner_read"`  // Owner can read.
-	OwnerWrite bool   `json:"owner_write"` // Owner can write.
-	OwnerExec  bool   `json:"owner_exec"`  // Owner can execute.
-	GroupRead  bool   `json:"group_read"`  // Group can read.
-	GroupWrite bool   `json:"group_write"` // Group can write.
-	GroupExec  bool   `json:"group_exec"`  // Group can execute.
-	OtherRead  bool   `json:"other_read"`  // Others can read.
-	OtherWrite bool   `json:"other_write"` // Others can write.
-	OtherExec  bool   `json:"other_exec"`  // Others can execute.
-	Setuid     bool   `json:"setuid"`      // Setuid bit set.
-	Setgid     bool   `json:"setgid"`      // Setgid bit set.
-	Sticky     bool   `json:"sticky"`      // Sticky bit set.
+	Mode       string `json:"mode" desc:"File mode as string (e.g., rwxr-xr-x)."` // File mode as string (e.g., "rwxr-xr-x").
+	OwnerRead  bool   `json:"owner_read" desc:"Owner can read."`                  // Owner can read.
+	OwnerWrite bool   `json:"owner_write" desc:"Owner can write."`                // Owner can write.
+	OwnerExec  bool   `json:"owner_exec" desc:"Owner can execute."`               // Owner can execute.
+	GroupRead  bool   `json:"group_read" desc:"Group can read."`                  // Group can read.
+	GroupWrite bool   `json:"group_write" desc:"Group can write."`                // Group can write.
+	GroupExec  bool   `json:"group_exec" desc:"Group can execute."`               // Group can execute.
+	OtherRead  bool   `json:"other_read" desc:"Others can read."`                 // Others can read.
+	OtherWrite bool   `json:"other_write" desc:"Others can write."`               // Others can write.
+	OtherExec  bool   `json:"other_exec" desc:"Others can execute."`              // Others can execute.
+	Setuid     bool   `json:"setuid" desc:"Setuid bit set."`                      // Setuid bit set.
+	Setgid     bool   `json:"setgid" desc:"Setgid bit set."`                      // Setgid bit set.
+	Sticky     bool   `json:"sticky" desc:"Sticky bit set."`                      // Sticky bit set.
 }
 
 func (f FilePermissions) Clone() FilePermissions {
@@ -1480,10 +1480,10 @@ func (f FilePermissions) MarshalJSON() ([]byte, error) {
 // File Metadata.
 
 type FileMetadata struct {
-	Size     int64     `json:"size"`     // File size in bytes.
-	Access   time.Time `json:"access"`   // Last access time.
-	Change   time.Time `json:"change"`   // Last modification time.
-	Creation time.Time `json:"creation"` // Creation time.
+	Size     int64     `json:"size,omitempty" desc:"File size in bytes."`      // File size in bytes.
+	Access   time.Time `json:"access,omitzero" desc:"Last access time."`       // Last access time.
+	Change   time.Time `json:"change,omitzero" desc:"Last modification time."` // Last modification time.
+	Creation time.Time `json:"creation,omitzero" desc:"Creation time."`        // Creation time.
 }
 
 func (f FileMetadata) Clone() FileMetadata {
@@ -1550,22 +1550,22 @@ func (f *FileMetadata) UnmarshalJSON(data []byte) error {
 // File Actions.
 
 type FileActions struct {
-	Actions  []string `json:"actions"`  // List of actions performed on the file.
-	Open     bool     `json:"open"`     // File was opened.
-	Read     bool     `json:"read"`     // File was read.
-	Write    bool     `json:"write"`    // File was written.
-	Exec     bool     `json:"exec"`     // File was executed (execve).
-	Create   bool     `json:"create"`   // File was created.
-	Unlink   bool     `json:"unlink"`   // File was deleted (unlinked).
-	Rename   bool     `json:"rename"`   // File was renamed.
-	Link     bool     `json:"link"`     // File was hardlinked.
-	Truncate bool     `json:"truncate"` // File was truncated.
-	Fsync    bool     `json:"fsync"`    // File was fsynced.
-	Flock    bool     `json:"flock"`    // File was flocked.
-	Mmap     bool     `json:"mmap"`     // File was mmapped.
-	Close    bool     `json:"close"`    // File was closed.
-	Async    bool     `json:"async"`    // Async I/O performed.
-	Seek     bool     `json:"seek"`     // File was llseeked.
+	Actions  []string `json:"actions,omitempty" desc:"List of actions performed on the file."` // List of actions performed on the file.
+	Open     bool     `json:"open,omitempty" desc:"File was opened."`                          // File was opened.
+	Read     bool     `json:"read,omitempty" desc:"File was read."`                            // File was read.
+	Write    bool     `json:"write,omitempty" desc:"File was written."`                        // File was written.
+	Exec     bool     `json:"exec,omitempty" desc:"File was executed (execve)."`               // File was executed (execve).
+	Create   bool     `json:"create,omitempty" desc:"File was created."`                       // File was created.
+	Unlink   bool     `json:"unlink,omitempty" desc:"File was deleted (unlinked)."`            // File was deleted (unlinked).
+	Rename   bool     `json:"rename,omitempty" desc:"File was renamed."`                       // File was renamed.
+	Link     bool     `json:"link,omitempty" desc:"File was hardlinked."`                      // File was hardlinked.
+	Truncate bool     `json:"truncate,omitempty" desc:"File was truncated."`                   // File was truncated.
+	Fsync    bool     `json:"fsync,omitempty" desc:"File was fsynced."`                        // File was fsynced.
+	Flock    bool     `json:"flock,omitempty" desc:"File was flocked."`                        // File was flocked.
+	Mmap     bool     `json:"mmap,omitempty" desc:"File was mmapped."`                         // File was mmapped.
+	Close    bool     `json:"close,omitempty" desc:"File was closed."`                         // File was closed.
+	Async    bool     `json:"async,omitempty" desc:"Async I/O performed."`                     // Async I/O performed.
+	Seek     bool     `json:"seek,omitempty" desc:"File was seeked."`                          // File was llseeked.
 }
 
 func (f FileActions) Clone() FileActions {
@@ -1654,7 +1654,7 @@ func (f FileActions) MarshalJSON() ([]byte, error) {
 // File Aggregate.
 
 type FileAggregate struct {
-	Root FSDir `json:"root"` // Root directory of the file tree.
+	Root FSDir `json:"root,omitzero" desc:"Root directory of the file tree."` // Root directory of the file tree.
 }
 
 func (f FileAggregate) Clone() FileAggregate {
@@ -1678,11 +1678,11 @@ func (f FileAggregate) MarshalJSON() ([]byte, error) {
 // FSDir.
 
 type FSDir struct {
-	Path    string   `json:"path"`     // Absolute path of the directory.
-	Base    string   `json:"base"`     // Base name of the directory.
-	Dirs    []FSDir  `json:"dirs"`     // Subdirectories.
-	Files   []FSFile `json:"files"`    // Files in this directory.
-	DirHash uint32   `json:"dir_hash"` // The hash of the directory.
+	Path    string   `json:"path,omitempty" desc:"Absolute path of the directory."` // Absolute path of the directory.
+	Base    string   `json:"base,omitempty" desc:"Base name of the directory."`     // Base name of the directory.
+	Dirs    []FSDir  `json:"dirs,omitempty" desc:"Subdirectories."`                 // Subdirectories.
+	Files   []FSFile `json:"files,omitempty" desc:"Files in this directory."`       // Files in this directory.
+	DirHash uint32   `json:"dir_hash,omitempty" desc:"The hash of the directory."`  // The hash of the directory.
 }
 
 func (f FSDir) Clone() FSDir {
@@ -1734,15 +1734,15 @@ func (f FSDir) MarshalJSON() ([]byte, error) {
 // FSFile.
 
 type FSFile struct {
-	Path     string       `json:"path"`      // Absolute path of the file.
-	Base     string       `json:"base"`      // Base name of the file.
-	Actions  []string     `json:"actions"`   // Actions taken on the file.
-	Mode     string       `json:"mode"`      // File mode.
-	Owner    FileOwner    `json:"owner"`     // File owner.
-	Metadata FileMetadata `json:"metadata"`  // File metadata.
-	FileHash uint32       `json:"file_hash"` // The hash of the file.
-	DirHash  uint32       `json:"dir_hash"`  // The hash of the directory.
-	BaseHash uint32       `json:"base_hash"` // The hash of the base name.
+	Path     string       `json:"path" desc:"Absolute path of the file."`              // Absolute path of the file.
+	Base     string       `json:"base" desc:"Base name of the file."`                  // Base name of the file.
+	Actions  []string     `json:"actions,omitempty" desc:"Actions taken on the file."` // Actions taken on the file.
+	Mode     string       `json:"mode" desc:"File mode."`                              // File mode.
+	Owner    FileOwner    `json:"owner" desc:"File owner."`                            // File owner.
+	Metadata FileMetadata `json:"metadata,omitzero" desc:"File metadata."`             // File metadata.
+	FileHash uint32       `json:"file_hash" desc:"The hash of the file."`              // The hash of the file.
+	DirHash  uint32       `json:"dir_hash" desc:"The hash of the directory."`          // The hash of the directory.
+	BaseHash uint32       `json:"base_hash" desc:"The hash of the base name."`         // The hash of the base name.
 }
 
 func (f FSFile) Clone() FSFile {
@@ -1807,17 +1807,17 @@ func (f FSFile) MarshalJSON() ([]byte, error) {
 // Flow.
 
 type Flow struct {
-	UUID        string `json:"uuid"`         // UUID of the flow.
-	IPVersion   int    `json:"ip_version"`   // IP version.
-	Proto       string `json:"proto"`        // Protocol.
-	ICMP        ICMP   `json:"icmp"`         // ICMP.
-	Local       Node   `json:"local"`        // Local node.
-	Remote      Node   `json:"remote"`       // Remote node.
-	ServicePort int    `json:"service_port"` // Service port.
-	Flags       Flags  `json:"flags"`        // Flags.
-	Phase       Phase  `json:"phase"`        // Flow phase.
+	UUID        string `json:"uuid" desc:"UUID of the flow."`                         // UUID of the flow.
+	IPVersion   int    `json:"ip_version" desc:"IP version (4 or 6)."`                // IP version.
+	Proto       string `json:"proto" desc:"Network protocol."`                        // Protocol.
+	ICMP        ICMP   `json:"icmp,omitzero" desc:"ICMP type and code."`              // ICMP.
+	Local       Node   `json:"local,omitzero" desc:"Local network endpoint."`         // Local node.
+	Remote      Node   `json:"remote,omitzero" desc:"Remote network endpoint."`       // Remote node.
+	ServicePort int    `json:"service_port,omitempty" desc:"Service port."`           // Service port.
+	Flags       Flags  `json:"flags,omitzero" desc:"Flow state and direction flags."` // Flags.
+	Phase       Phase  `json:"phase,omitzero" desc:"Flow lifecycle phase."`           // Flow phase.
 	// Hashes for external indexing amongst other ongoing events.
-	FlowHash uint32 `json:"flow_hash"` // The hash of the flow.
+	FlowHash uint32 `json:"flow_hash,omitempty" desc:"The hash of the flow."` // The hash of the flow.
 }
 
 func (f Flow) Clone() Flow {
@@ -1894,8 +1894,8 @@ func (f Flow) MarshalJSON() ([]byte, error) {
 }
 
 type ICMP struct {
-	Type string `json:"type"` // ICMP type.
-	Code string `json:"code"` // ICMP code.
+	Type string `json:"type" desc:"ICMP type."` // ICMP type.
+	Code string `json:"code" desc:"ICMP code."` // ICMP code.
 }
 
 func (i ICMP) IsZero() bool {
@@ -1917,10 +1917,10 @@ func (i ICMP) MarshalJSON() ([]byte, error) {
 }
 
 type Node struct {
-	Address string   `json:"address"` // IP address.
-	Name    string   `json:"name"`    // DNS name.
-	Names   []string `json:"names"`   // DNS names.
-	Port    int      `json:"port"`    // Port.
+	Address string   `json:"address" desc:"IP address."`                 // IP address.
+	Name    string   `json:"name" desc:"Primary DNS name."`              // DNS name.
+	Names   []string `json:"names,omitempty" desc:"Resolved DNS names."` // DNS names.
+	Port    int      `json:"port" desc:"Network port."`                  // Port.
 }
 
 func (n Node) Clone() Node {
@@ -1958,15 +1958,15 @@ func (n Node) MarshalJSON() ([]byte, error) {
 }
 
 type Flags struct {
-	Ingress    bool `json:"ingress"`    // An ingress packet has been received.
-	Egress     bool `json:"egress"`     // An egress packet has been sent.
-	Incoming   bool `json:"incoming"`   // Connection is incoming.
-	Outgoing   bool `json:"outgoing"`   // Connection is outgoing.
-	Started    bool `json:"started"`    // Connection has been started.
-	Ongoing    bool `json:"ongoing"`    // Connection is ongoing.
-	Ended      bool `json:"ended"`      // Connection has been ended.
-	Terminator bool `json:"terminator"` // Local node has terminated the connection.
-	Terminated bool `json:"terminated"` // Remote node has terminated the connection.
+	Ingress    bool `json:"ingress" desc:"An ingress packet has been received."`          // An ingress packet has been received.
+	Egress     bool `json:"egress" desc:"An egress packet has been sent."`                // An egress packet has been sent.
+	Incoming   bool `json:"incoming" desc:"Connection is incoming."`                      // Connection is incoming.
+	Outgoing   bool `json:"outgoing" desc:"Connection is outgoing."`                      // Connection is outgoing.
+	Started    bool `json:"started" desc:"Connection has been started."`                  // Connection has been started.
+	Ongoing    bool `json:"ongoing" desc:"Connection is ongoing."`                        // Connection is ongoing.
+	Ended      bool `json:"ended" desc:"Connection has been ended."`                      // Connection has been ended.
+	Terminator bool `json:"terminator" desc:"Local node has terminated the connection."`  // Local node has terminated the connection.
+	Terminated bool `json:"terminated" desc:"Remote node has terminated the connection."` // Remote node has terminated the connection.
 }
 
 func (f Flags) IsZero() bool {
@@ -2010,10 +2010,10 @@ func (f Flags) MarshalJSON() ([]byte, error) {
 }
 
 type Phase struct {
-	Direction  string `json:"direction"`    // Direction of the flow.
-	InitatedBy string `json:"initiated_by"` // Who initiated the flow.
-	Status     string `json:"status"`       // Status of the flow.
-	EndedBy    string `json:"ended_by"`     // Who ended the flow.
+	Direction  string `json:"direction" desc:"Direction of the flow."`     // Direction of the flow.
+	InitatedBy string `json:"initiated_by" desc:"Who initiated the flow."` // Who initiated the flow.
+	Status     string `json:"status" desc:"Status of the flow."`           // Status of the flow.
+	EndedBy    string `json:"ended_by" desc:"Who ended the flow."`         // Who ended the flow.
 }
 
 func (p Phase) IsZero() bool {
@@ -2044,15 +2044,15 @@ func (p Phase) MarshalJSON() ([]byte, error) {
 // Node Pair Key.
 
 type NodePairKey struct {
-	LocalAddr  string `json:"local_addr"`
-	RemoteAddr string `json:"remote_addr"`
+	LocalAddr  string `json:"local_addr" desc:"Local IP address."`
+	RemoteAddr string `json:"remote_addr" desc:"Remote IP address."`
 }
 
 // Flow Aggregate.
 
 type FlowAggregate struct {
-	IPVersion int                 `json:"ip_version"` // IP version.
-	Protocols []ProtocolAggregate `json:"protocols"`  // List of protocol aggregates.
+	IPVersion int                 `json:"ip_version,omitempty" desc:"IP version (4 or 6)."`             // IP version.
+	Protocols []ProtocolAggregate `json:"protocols,omitempty" desc:"List of protocol flow aggregates."` // List of protocol aggregates.
 }
 
 func (f FlowAggregate) Clone() FlowAggregate {
@@ -2087,9 +2087,9 @@ func (f FlowAggregate) MarshalJSON() ([]byte, error) {
 // Protocol Aggregate.
 
 type ProtocolAggregate struct {
-	Proto string                   `json:"proto"` // Protocol (e.g., TCP, UDP, ICMP).
-	Pairs []ProtocolLocalRemoteAgg `json:"pairs"` // List of unique local/remote node pairs for this protocol.
-	ICMPs []ICMP                   `json:"icmps"` // ICMP types/codes if protocol is ICMP.
+	Proto string                   `json:"proto,omitempty" desc:"Network protocol (e.g., TCP, UDP, ICMP)."`                      // Protocol (e.g., TCP, UDP, ICMP).
+	Pairs []ProtocolLocalRemoteAgg `json:"pairs,omitempty" desc:"List of unique local and remote node pairs for this protocol."` // List of unique local/remote node pairs for this protocol.
+	ICMPs []ICMP                   `json:"icmps,omitempty" desc:"ICMP types and codes when protocol is ICMP."`                   // ICMP types/codes if protocol is ICMP.
 }
 
 func (p ProtocolAggregate) Clone() ProtocolAggregate {
@@ -2131,8 +2131,8 @@ func (p ProtocolAggregate) MarshalJSON() ([]byte, error) {
 // Protocol Local/Remote Aggregate.
 
 type ProtocolLocalRemoteAgg struct {
-	Nodes      LocalRemotePair `json:"nodes"`       // Local and remote nodes.
-	PortMatrix []PortCommAgg   `json:"port_matrix"` // All ports used in flows between the nodes.
+	Nodes      LocalRemotePair `json:"nodes,omitzero" desc:"Local and remote nodes."`                           // Local and remote nodes.
+	PortMatrix []PortCommAgg   `json:"port_matrix,omitempty" desc:"All ports used in flows between the nodes."` // All ports used in flows between the nodes.
 }
 
 func (p ProtocolLocalRemoteAgg) Clone() ProtocolLocalRemoteAgg {
@@ -2170,9 +2170,9 @@ func (p ProtocolLocalRemoteAgg) MarshalJSON() ([]byte, error) {
 // Protocol Node.
 
 type ProtocolNode struct {
-	Address string   `json:"address"` // IP address.
-	Name    string   `json:"name"`    // DNS name.
-	Names   []string `json:"names"`   // DNS names.
+	Address string   `json:"address" desc:"IP address."`                 // IP address.
+	Name    string   `json:"name,omitempty" desc:"Primary DNS name."`    // DNS name.
+	Names   []string `json:"names,omitempty" desc:"Resolved DNS names."` // DNS names.
 }
 
 func (p ProtocolNode) Clone() ProtocolNode {
@@ -2208,8 +2208,8 @@ func (p ProtocolNode) MarshalJSON() ([]byte, error) {
 // Local/Remote Pair.
 
 type LocalRemotePair struct {
-	Local  ProtocolNode `json:"local"`  // Local node.
-	Remote ProtocolNode `json:"remote"` // Remote node.
+	Local  ProtocolNode `json:"local,omitzero" desc:"Local node."`   // Local node.
+	Remote ProtocolNode `json:"remote,omitzero" desc:"Remote node."` // Remote node.
 }
 
 func (l LocalRemotePair) Clone() LocalRemotePair {
@@ -2240,9 +2240,9 @@ func (l LocalRemotePair) MarshalJSON() ([]byte, error) {
 // Port Communication Aggregate.
 
 type PortCommAgg struct {
-	SrcPort int   `json:"src_port"` // Source port.
-	DstPort int   `json:"dst_port"` // Destination port.
-	Phase   Phase `json:"phase"`    // Flow phase.
+	SrcPort int   `json:"src_port" desc:"Source port."`      // Source port.
+	DstPort int   `json:"dst_port" desc:"Destination port."` // Destination port.
+	Phase   Phase `json:"phase,omitzero" desc:"Flow phase."` // Flow phase.
 }
 
 func (p PortCommAgg) IsZero() bool {
@@ -2275,13 +2275,13 @@ func (p PortCommAgg) MarshalJSON() ([]byte, error) {
 // Containers and Namespaces.
 
 type Containers struct {
-	MntNamespaceIDs    []ContainerID `json:"mnt_namespace_ids"`    // Mount namespace IDs.
-	PidNamespaceIDs    []ContainerID `json:"pid_namespace_ids"`    // PID namespace IDs.
-	UtsNamespaceIDs    []ContainerID `json:"uts_namespace_ids"`    // UTS namespace IDs.
-	IpcNamespaceIDs    []ContainerID `json:"ipc_namespace_ids"`    // IPC namespace IDs.
-	NetNamespaceIDs    []ContainerID `json:"net_namespace_ids"`    // Net namespace IDs.
-	CgroupNamespaceIDs []ContainerID `json:"cgroup_namespace_ids"` // Cgroup namespace IDs.
-	Containers         []Container   `json:"containers"`           // Containers.
+	MntNamespaceIDs    []ContainerID `json:"mnt_namespace_ids,omitempty" desc:"Mount namespace IDs."`     // Mount namespace IDs.
+	PidNamespaceIDs    []ContainerID `json:"pid_namespace_ids,omitempty" desc:"PID namespace IDs."`       // PID namespace IDs.
+	UtsNamespaceIDs    []ContainerID `json:"uts_namespace_ids,omitempty" desc:"UTS namespace IDs."`       // UTS namespace IDs.
+	IpcNamespaceIDs    []ContainerID `json:"ipc_namespace_ids,omitempty" desc:"IPC namespace IDs."`       // IPC namespace IDs.
+	NetNamespaceIDs    []ContainerID `json:"net_namespace_ids,omitempty" desc:"Network namespace IDs."`   // Net namespace IDs.
+	CgroupNamespaceIDs []ContainerID `json:"cgroup_namespace_ids,omitempty" desc:"Cgroup namespace IDs."` // Cgroup namespace IDs.
+	Containers         []Container   `json:"containers,omitempty" desc:"Containers."`                     // Containers.
 }
 
 func (c Containers) Clone() Containers {
@@ -2349,8 +2349,8 @@ func (c Containers) MarshalJSON() ([]byte, error) {
 // Container ID.
 
 type ContainerID struct {
-	Name string `json:"name"` // Container name.
-	ID   string `json:"id"`   // Container ID.
+	Name string `json:"name,omitempty" desc:"Container name."` // Container name.
+	ID   string `json:"id" desc:"Container ID."`               // Container ID.
 }
 
 func (c ContainerID) GetName() string {
@@ -2382,9 +2382,9 @@ func (c ContainerID) MarshalJSON() ([]byte, error) {
 // Mount.
 
 type Mount struct {
-	Source      string `json:"source"`
-	Destination string `json:"destination"`
-	Type        string `json:"type"`
+	Source      string `json:"source" desc:"Mount source path."`
+	Destination string `json:"destination" desc:"Mount destination path inside the container."`
+	Type        string `json:"type" desc:"Mount type."`
 }
 
 func (m Mount) Clone() Mount {
@@ -2420,33 +2420,33 @@ func (m Mount) MarshalJSON() ([]byte, error) {
 // Container.
 
 type Container struct {
-	ID           string     `json:"id"`            // Container ID.
-	Name         string     `json:"name"`          // Container name.
-	HostName     string     `json:"hostname"`      // Host name.
-	ImageID      string     `json:"image_id"`      // Image ID.
-	Image        string     `json:"image"`         // Image name.
-	Version      string     `json:"version"`       // Image version.
-	Runtime      string     `json:"runtime"`       // Container runtime ("docker", "containerd", etc).
-	Driver       string     `json:"driver"`        // Container driver ("overlay2", "aufs", etc).
-	PID          int        `json:"pid"`           // Process ID.
-	ExitCode     int        `json:"exit_code"`     // Exit code.
-	Status       string     `json:"status"`        // Current status.
-	IsAttached   bool       `json:"is_attached"`   // Whether the container is attached to the host.
-	Path         string     `json:"path"`          // Path to the container executable.
-	Cwd          string     `json:"cwd"`           // Current working directory.
-	CreatedAt    time.Time  `json:"created_at"`    // Creation time.
-	StartedAt    time.Time  `json:"started_at"`    // Start time.
-	FinishedAt   time.Time  `json:"finished_at"`   // Finish time.
-	Mounts       []Mount    `json:"mounts"`        // Mounts.
-	NetworkMode  string     `json:"network_mode"`  // Network mode.
-	CgroupnsMode string     `json:"cgroupns_mode"` // Cgroup namespace mode.
-	IpcMode      string     `json:"ipc_mode"`      // IPC mode.
-	PidMode      string     `json:"pid_mode"`      // PID mode.
-	UsernsMode   string     `json:"userns_mode"`   // User namespace mode.
-	UTSMode      string     `json:"uts_mode"`      // UTS namespace mode.
-	Env          []string   `json:"env"`           // Environment variables.
-	Cmd          []string   `json:"cmd"`           // Command.
-	Namespaces   Namespaces `json:"namespaces"`    // Namespaces.
+	ID           string     `json:"id" desc:"Container ID."`                                                     // Container ID.
+	Name         string     `json:"name,omitempty" desc:"Container name."`                                       // Container name.
+	HostName     string     `json:"hostname,omitempty" desc:"Container hostname."`                               // Host name.
+	ImageID      string     `json:"image_id,omitempty" desc:"Container image ID."`                               // Image ID.
+	Image        string     `json:"image,omitempty" desc:"Container image name."`                                // Image name.
+	Version      string     `json:"version,omitempty" desc:"Container image version."`                           // Image version.
+	Runtime      string     `json:"runtime,omitempty" desc:"Container runtime (docker, containerd, etc)."`       // Container runtime ("docker", "containerd", etc).
+	Driver       string     `json:"driver,omitempty" desc:"Container storage driver (overlay2, aufs, etc)."`     // Container driver ("overlay2", "aufs", etc).
+	PID          int        `json:"pid,omitempty" desc:"Container init process ID."`                             // Process ID.
+	ExitCode     int        `json:"exit_code,omitempty" desc:"Container exit code."`                             // Exit code.
+	Status       string     `json:"status,omitempty" desc:"Current container status."`                           // Current status.
+	IsAttached   bool       `json:"is_attached,omitempty" desc:"Whether the container is attached to the host."` // Whether the container is attached to the host.
+	Path         string     `json:"path,omitempty" desc:"Path to the container executable."`                     // Path to the container executable.
+	Cwd          string     `json:"cwd,omitempty" desc:"Current working directory of the container."`            // Current working directory.
+	CreatedAt    time.Time  `json:"created_at,omitzero" desc:"Container creation time."`                         // Creation time.
+	StartedAt    time.Time  `json:"started_at,omitzero" desc:"Container start time."`                            // Start time.
+	FinishedAt   time.Time  `json:"finished_at,omitzero" desc:"Container finish time."`                          // Finish time.
+	Mounts       []Mount    `json:"mounts,omitempty" desc:"Container filesystem mounts."`                        // Mounts.
+	NetworkMode  string     `json:"network_mode,omitempty" desc:"Container network mode."`                       // Network mode.
+	CgroupnsMode string     `json:"cgroupns_mode,omitempty" desc:"Container cgroup namespace mode."`             // Cgroup namespace mode.
+	IpcMode      string     `json:"ipc_mode,omitempty" desc:"Container IPC mode."`                               // IPC mode.
+	PidMode      string     `json:"pid_mode,omitempty" desc:"Container PID mode."`                               // PID mode.
+	UsernsMode   string     `json:"userns_mode,omitempty" desc:"Container user namespace mode."`                 // User namespace mode.
+	UTSMode      string     `json:"uts_mode,omitempty" desc:"Container UTS namespace mode."`                     // UTS namespace mode.
+	Env          []string   `json:"env,omitempty" desc:"Container environment variables."`                       // Environment variables.
+	Cmd          []string   `json:"cmd,omitempty" desc:"Container command and arguments."`                       // Command.
+	Namespaces   Namespaces `json:"namespaces,omitzero" desc:"Container Linux namespaces."`                      // Namespaces.
 }
 
 func (c Container) Clone() Container {
@@ -2624,12 +2624,12 @@ func (c *Container) UnmarshalJSON(data []byte) error {
 // ProcessTree.
 
 type ProcessTree struct {
-	PID        uint32   `json:"pid"` // Process ID.
-	Process    string   `json:"process"`
-	Executable string   `json:"executable"`
-	Arguments  string   `json:"arguments"`
-	GitHubStep string   `json:"github_step"`
-	Ancestry   []string `json:"ancestry"`
+	PID        uint32   `json:"pid,omitempty" desc:"Process ID."` // Process ID.
+	Process    string   `json:"process,omitempty" desc:"Process command line."`
+	Executable string   `json:"executable,omitempty" desc:"Process executable path."`
+	Arguments  string   `json:"arguments,omitempty" desc:"Process command-line arguments."`
+	GitHubStep string   `json:"github_step,omitempty" desc:"GitHub Actions workflow step name."`
+	Ancestry   []string `json:"ancestry,omitempty" desc:"Process ancestry chain."`
 }
 
 func (pt ProcessTree) Clone() ProcessTree {
@@ -2705,18 +2705,18 @@ func (pt ProcessTree) StringSlice() []string {
 // GeoIP location type.
 
 type GeoIPLocation struct {
-	Latitude      float64 `json:"latitude"`
-	Longitude     float64 `json:"longitude"`
-	Continent     string  `json:"continent"`
-	ContinentCode string  `json:"continent_code"`
-	Country       string  `json:"country"`
-	CountryCode   string  `json:"country_code"`
-	Region        string  `json:"region"`
-	RegionName    string  `json:"region_name"`
-	City          string  `json:"city"`
-	ISP           string  `json:"isp"`
-	Org           string  `json:"org"`
-	Asname        string  `json:"asname"`
+	Latitude      float64 `json:"latitude,omitempty" desc:"Geographic latitude."`
+	Longitude     float64 `json:"longitude,omitempty" desc:"Geographic longitude."`
+	Continent     string  `json:"continent,omitempty" desc:"Continent name."`
+	ContinentCode string  `json:"continent_code,omitempty" desc:"Two-letter continent code."`
+	Country       string  `json:"country,omitempty" desc:"Country name."`
+	CountryCode   string  `json:"country_code,omitempty" desc:"Two-letter ISO country code."`
+	Region        string  `json:"region,omitempty" desc:"Region or state code."`
+	RegionName    string  `json:"region_name,omitempty" desc:"Region or state name."`
+	City          string  `json:"city,omitempty" desc:"City name."`
+	ISP           string  `json:"isp,omitempty" desc:"Internet service provider name."`
+	Org           string  `json:"org,omitempty" desc:"Organization name."`
+	Asname        string  `json:"asname,omitempty" desc:"Autonomous system name and number."`
 }
 
 func (gl GeoIPLocation) Clone() GeoIPLocation {
@@ -2808,16 +2808,16 @@ func (gl GeoIPLocation) String() string {
 // Egress Peer: A single remote peer that supports the egress profile.
 
 type Peer struct {
-	Result        Result        `json:"result"`
-	Detections    []string      `json:"detections"`
-	Protocol      string        `json:"protocol"`
-	LocalAddress  string        `json:"local_address"`
-	RemoteAddress string        `json:"remote_address"`
-	LocalNames    []string      `json:"local_names"`
-	RemoteNames   []string      `json:"remote_names"`
-	RemotePorts   []string      `json:"remote_ports"`
-	ProcTrees     []ProcessTree `json:"proc_trees"`
-	RemoteGeoInfo GeoIPLocation `json:"remote_geo_info"`
+	Result        Result        `json:"result" desc:"Evaluation result for the peer (pass, attention, fail)."`
+	Detections    []string      `json:"detections,omitempty" desc:"Detection UUIDs associated with the peer."`
+	Protocol      string        `json:"protocol" desc:"Network protocol used to communicate with the peer."`
+	LocalAddress  string        `json:"local_address" desc:"Local IP or socket address."`
+	RemoteAddress string        `json:"remote_address" desc:"Remote IP or socket address."`
+	LocalNames    []string      `json:"local_names,omitempty" desc:"Resolved local domain names."`
+	RemoteNames   []string      `json:"remote_names,omitempty" desc:"Resolved remote domain names."`
+	RemotePorts   []string      `json:"remote_ports,omitempty" desc:"Remote ports contacted on the peer."`
+	ProcTrees     []ProcessTree `json:"proc_trees,omitempty" desc:"Process trees that communicated with the peer."`
+	RemoteGeoInfo GeoIPLocation `json:"remote_geo_info,omitzero" desc:"Geographic IP location of the remote peer."`
 }
 
 func (ep Peer) Clone() Peer {
@@ -2898,8 +2898,8 @@ func (ep Peer) String() string {
 // Direction: Ingress, Egress or Local traffic.
 
 type Direction struct {
-	Peers   []Peer   `json:"peers"`
-	Domains []string `json:"domains"`
+	Peers   []Peer   `json:"peers,omitempty" desc:"Network peers observed in this traffic direction."`
+	Domains []string `json:"domains,omitempty" desc:"Domain names observed in this traffic direction."`
 }
 
 func (e Direction) Clone() Direction {
@@ -2935,9 +2935,9 @@ func (e Direction) MarshalJSON() ([]byte, error) {
 // NetProfile: A collection of network telemetry that supports the profile.
 
 type NetProfile struct {
-	Egress  Direction `json:"egress"`
-	Ingress Direction `json:"ingress"`
-	Local   Direction `json:"local"`
+	Egress  Direction `json:"egress,omitzero" desc:"Outbound network traffic profile."`
+	Ingress Direction `json:"ingress,omitzero" desc:"Inbound network traffic profile."`
+	Local   Direction `json:"local,omitzero" desc:"Local network traffic profile."`
 }
 
 func (np NetProfile) Clone() NetProfile {
@@ -2981,8 +2981,8 @@ func (np NetProfile) MarshalJSON() ([]byte, error) {
 // DirectionNetTelemetry: Summary of network telemetry for a direction.
 
 type DirectionNetTelemetry struct {
-	TotalDomains     uint `json:"total_domains"`
-	TotalConnections uint `json:"total_connections"`
+	TotalDomains     uint `json:"total_domains" desc:"Total number of domains observed in this direction."`
+	TotalConnections uint `json:"total_connections" desc:"Total number of connections observed in this direction."`
 }
 
 func (int DirectionNetTelemetry) Clone() DirectionNetTelemetry {
@@ -3014,9 +3014,9 @@ func (int DirectionNetTelemetry) MarshalJSON() ([]byte, error) {
 // NetTelemetry: Summary of network telemetry for the profile.
 
 type NetTelemetry struct {
-	Egress  DirectionNetTelemetry `json:"egress"`
-	Ingress DirectionNetTelemetry `json:"ingress"`
-	Local   DirectionNetTelemetry `json:"local"`
+	Egress  DirectionNetTelemetry `json:"egress,omitzero" desc:"Outbound network telemetry summary."`
+	Ingress DirectionNetTelemetry `json:"ingress,omitzero" desc:"Inbound network telemetry summary."`
+	Local   DirectionNetTelemetry `json:"local,omitzero" desc:"Local network telemetry summary."`
 }
 
 func (nt NetTelemetry) Clone() NetTelemetry {
@@ -3058,7 +3058,7 @@ func (nt NetTelemetry) MarshalJSON() ([]byte, error) {
 // Telemetry: A collection of telemetry data that supports the profile.
 
 type Telemetry struct {
-	Network NetTelemetry `json:"network"`
+	Network NetTelemetry `json:"network,omitzero" desc:"Network telemetry summary."`
 }
 
 func (t Telemetry) Clone() Telemetry {
@@ -3086,9 +3086,9 @@ func (t Telemetry) MarshalJSON() ([]byte, error) {
 // Evidence: A single piece of evidence that supports an assertion.
 
 type Evidence struct {
-	Timestamp time.Time `json:"timestamp"`  // Event timestamp.
-	EventName string    `json:"event_name"` // Event name.
-	Peer      Peer      `json:"peer"`       // Peer.
+	Timestamp time.Time `json:"timestamp" desc:"Event timestamp."`                          // Event timestamp.
+	EventName string    `json:"event_name" desc:"Event name."`                              // Event name.
+	Peer      Peer      `json:"peer,omitzero" desc:"Network peer supporting the evidence."` // Peer.
 }
 
 func (e Evidence) Clone() Evidence {
@@ -3212,6 +3212,50 @@ func (rid ResultID) StringSlice() []string {
 	return parts
 }
 
+func (rid ResultID) MarshalText() ([]byte, error) {
+	return []byte(rid.String()), nil
+}
+
+func (rid *ResultID) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s == "" {
+		*rid = ResultIDNone
+		return nil
+	}
+
+	parts := strings.Split(s, "|")
+	var result ResultID
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+
+		matched := false
+		for id, idName := range resultIDStrings {
+			if id == ResultIDNone {
+				continue
+			}
+			if idName == name {
+				result |= id
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			return fmt.Errorf("invalid result id: %s", name)
+		}
+	}
+
+	*rid = result
+	return nil
+}
+
+func (rid ResultID) MarshalJSON() ([]byte, error) {
+	return json.Marshal(rid.String())
+}
+
 func (rid *ResultID) UnmarshalJSON(data []byte) error {
 	if string(data) == "null" {
 		*rid = ResultIDNone
@@ -3220,38 +3264,7 @@ func (rid *ResultID) UnmarshalJSON(data []byte) error {
 
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
-		if s == "" {
-			*rid = ResultIDNone
-			return nil
-		}
-
-		parts := strings.Split(s, "|")
-		var result ResultID
-		for _, part := range parts {
-			name := strings.TrimSpace(part)
-			if name == "" {
-				continue
-			}
-
-			matched := false
-			for id, idName := range resultIDStrings {
-				if id == ResultIDNone {
-					continue
-				}
-				if idName == name {
-					result |= id
-					matched = true
-					break
-				}
-			}
-
-			if !matched {
-				return fmt.Errorf("invalid result id: %s", name)
-			}
-		}
-
-		*rid = result
-		return nil
+		return rid.UnmarshalText([]byte(s))
 	}
 
 	var n uint64
@@ -3337,6 +3350,46 @@ func (r Result) StringSlice() []string {
 	return parts
 }
 
+func (r Result) MarshalText() ([]byte, error) {
+	return []byte(r.String()), nil
+}
+
+func (r *Result) UnmarshalText(text []byte) error {
+	s := string(text)
+	if s == "" {
+		*r = ResultNone
+		return nil
+	}
+
+	parts := strings.Split(s, "|")
+	var result Result
+	for _, part := range parts {
+		name := strings.TrimSpace(part)
+		if name == "" {
+			continue
+		}
+
+		matched := false
+		for id, resultName := range resultStrings {
+			if id == ResultNone {
+				continue
+			}
+			if resultName == name {
+				result |= id
+				matched = true
+				break
+			}
+		}
+
+		if !matched {
+			return fmt.Errorf("invalid result: %s", name)
+		}
+	}
+
+	*r = result
+	return nil
+}
+
 func (r Result) MarshalJSON() ([]byte, error) {
 	return json.Marshal(r.String())
 }
@@ -3349,38 +3402,7 @@ func (r *Result) UnmarshalJSON(data []byte) error {
 
 	var s string
 	if err := json.Unmarshal(data, &s); err == nil {
-		if s == "" {
-			*r = ResultNone
-			return nil
-		}
-
-		parts := strings.Split(s, "|")
-		var result Result
-		for _, part := range parts {
-			name := strings.TrimSpace(part)
-			if name == "" {
-				continue
-			}
-
-			matched := false
-			for id, resultName := range resultStrings {
-				if id == ResultNone {
-					continue
-				}
-				if resultName == name {
-					result |= id
-					matched = true
-					break
-				}
-			}
-
-			if !matched {
-				return fmt.Errorf("invalid result: %s", name)
-			}
-		}
-
-		*r = result
-		return nil
+		return r.UnmarshalText([]byte(s))
 	}
 
 	var n uint
@@ -3399,12 +3421,12 @@ func (r Result) Number() int {
 // Assertion: A list of evidence that supports the assertion.
 
 type Assertion struct {
-	ClassID     string     `json:"class_id,omitempty"`     // Class ID of assertion.
-	AssertionID string     `json:"assertion_id,omitempty"` // Assertion ID.
-	Result      Result     `json:"result"`                 // Result of the assertion.
-	Description string     `json:"description,omitempty"`  // Description of the assertion.
-	ResultID    ResultID   `json:"id"`                     // Result ID.
-	Evidence    []Evidence `json:"evidence"`               // Detections supporting the result.
+	ClassID     string     `json:"class_id,omitempty" desc:"Class ID of the assertion."`                 // Class ID of assertion.
+	AssertionID string     `json:"assertion_id,omitempty" desc:"Assertion identifier."`                  // Assertion ID.
+	Result      Result     `json:"result" desc:"Result of the assertion (pass, attention, fail)."`       // Result of the assertion.
+	Description string     `json:"description,omitempty" desc:"Description of the assertion."`           // Description of the assertion.
+	ResultID    ResultID   `json:"id" desc:"Result identifier."`                                         // Result ID.
+	Evidence    []Evidence `json:"evidence,omitempty" desc:"Evidence detections supporting the result."` // Detections supporting the result.
 }
 
 func (a Assertion) Clone() Assertion {
@@ -3461,11 +3483,11 @@ func (a Assertion) MarshalJSON() ([]byte, error) {
 }
 
 type DigestedDetection struct {
-	AssertionID string        `json:"assertion_id"` // Assertion ID that equals the 'assertion_id' field of the Assertion struct.
-	Metadata    Metadata      `json:"metadata"`     // Metadata associated with the detection.
-	Score       Score         `json:"score"`        // Score associated with the detection.
-	Result      Result        `json:"result"`       // Result of the detection.
-	ProcTrees   []ProcessTree `json:"proc_trees"`   // Process trees associated with the detection.
+	AssertionID string        `json:"assertion_id,omitempty" desc:"Assertion ID matching the corresponding assertion."` // Assertion ID that equals the 'assertion_id' field of the Assertion struct.
+	Metadata    Metadata      `json:"metadata,omitzero" desc:"Metadata associated with the detection."`                 // Metadata associated with the detection.
+	Score       Score         `json:"score,omitzero" desc:"Security risk score associated with the detection."`         // Score associated with the detection.
+	Result      Result        `json:"result,omitempty" desc:"Result of the detection (pass, attention, fail)."`         // Result of the detection.
+	ProcTrees   []ProcessTree `json:"proc_trees,omitempty" desc:"Process trees associated with the detection."`         // Process trees associated with the detection.
 }
 
 func (dd DigestedDetection) Clone() DigestedDetection {
@@ -3538,8 +3560,8 @@ func (dd *DigestedDetection) UnmarshalJSON(data []byte) error {
 }
 
 type ProfileDetection struct {
-	ClassID            string              `json:"class_id"`            // The class ID of the detection, which corresponds to the class ID of an assertion.
-	DigestedDetections []DigestedDetection `json:"digested_detections"` // The digested detections that are part of this class.
+	ClassID            string              `json:"class_id,omitempty" desc:"The class ID of the detection, corresponding to the assertion class ID."` // The class ID of the detection, which corresponds to the class ID of an assertion.
+	DigestedDetections []DigestedDetection `json:"digested_detections,omitempty" desc:"The digested detections that belong to this class."`           // The digested detections that are part of this class.
 }
 
 func (d ProfileDetection) Clone() ProfileDetection {
@@ -3599,10 +3621,10 @@ func (d *ProfileDetection) UnmarshalJSON(data []byte) error {
 
 type Profile struct {
 	Base
-	Network           NetProfile         `json:"network"`
-	ProfileDetections []ProfileDetection `json:"profile_detections"`
-	Telemetry         Telemetry          `json:"telemetry"`
-	Assertions        []Assertion        `json:"assertions"`
+	Network           NetProfile         `json:"network,omitzero" desc:"Network traffic behavior profile."`
+	ProfileDetections []ProfileDetection `json:"profile_detections,omitempty" desc:"Detections grouped by assertion class."`
+	Telemetry         Telemetry          `json:"telemetry,omitzero" desc:"Aggregated telemetry summary for the profile."`
+	Assertions        []Assertion        `json:"assertions,omitempty" desc:"Security policy assertions evaluated for the profile."`
 }
 
 func (p Profile) Clone() Profile {

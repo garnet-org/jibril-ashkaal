@@ -1116,3 +1116,62 @@ func TestProfile_Clone(t *testing.T) {
 	c.ProfileDetections[0].ClassID = "Other"
 	assert.Equal(t, "Egress", orig.ProfileDetections[0].ClassID)
 }
+
+func TestResult_TextMarshaler(t *testing.T) {
+	tests := []struct {
+		name    string
+		value   Result
+		want    string
+		wantErr bool
+	}{
+		{name: "none", value: ResultNone, want: ""},
+		{name: "pass", value: ResultGood, want: "pass"},
+		{name: "attention", value: ResultAttention, want: "attention"},
+		{name: "fail", value: ResultBad, want: "fail"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			text, err := tc.value.MarshalText()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, string(text))
+
+			var got Result
+			err = got.UnmarshalText(text)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.value, got)
+		})
+	}
+
+	var bad Result
+	assert.Error(t, bad.UnmarshalText([]byte("unknown")))
+}
+
+func TestResultID_TextMarshaler(t *testing.T) {
+	tests := []struct {
+		name  string
+		value ResultID
+		want  string
+	}{
+		{name: "none", value: ResultIDNone, want: ""},
+		{name: "no_bad_egress_domain", value: ResultNoBadEgressDomain, want: "no_bad_egress_domain"},
+		{name: "no_bad_ingress_domain", value: ResultNoBadIngressDomain, want: "no_bad_ingress_domain"},
+		{name: "no_bad_local_domain", value: ResultNoBadLocalDomain, want: "no_bad_local_domain"},
+	}
+
+	for _, tc := range tests {
+		t.Run(tc.name, func(t *testing.T) {
+			text, err := tc.value.MarshalText()
+			assert.NoError(t, err)
+			assert.Equal(t, tc.want, string(text))
+
+			var got ResultID
+			err = got.UnmarshalText(text)
+			assert.NoError(t, err)
+			assert.Equal(t, tc.value, got)
+		})
+	}
+
+	var bad ResultID
+	assert.Error(t, bad.UnmarshalText([]byte("unknown")))
+}
