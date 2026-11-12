@@ -3058,17 +3058,19 @@ func (nt NetTelemetry) MarshalJSON() ([]byte, error) {
 // Telemetry: A collection of telemetry data that supports the profile.
 
 type Telemetry struct {
-	Network NetTelemetry `json:"network,omitzero" desc:"Network telemetry summary."`
+	Network NetTelemetry      `json:"network,omitzero" desc:"Network telemetry summary."`
+	Capture *CaptureTelemetry `json:"capture,omitempty" desc:"Optional per-job capture completeness evidence."`
 }
 
 func (t Telemetry) Clone() Telemetry {
 	return Telemetry{
 		Network: t.Network.Clone(),
+		Capture: t.Capture.Clone(),
 	}
 }
 
 func (t Telemetry) IsZero() bool {
-	return t.Network.IsZero()
+	return t.Network.IsZero() && t.Capture == nil
 }
 
 func (t Telemetry) MarshalJSON() ([]byte, error) {
@@ -3077,9 +3079,11 @@ func (t Telemetry) MarshalJSON() ([]byte, error) {
 	}
 
 	return json.Marshal(struct {
-		Network NetTelemetry `json:"network"`
+		Network NetTelemetry      `json:"network"`
+		Capture *CaptureTelemetry `json:"capture,omitempty"`
 	}{
 		Network: t.Network,
+		Capture: t.Capture,
 	})
 }
 
